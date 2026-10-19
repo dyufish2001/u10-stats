@@ -1,0 +1,3769 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="2026 就是棒 U10 秋季聯賽打擊統計系統 — 打擊榜、打者分析、獎項排行、守備記錄、手動調整">
+<meta name="theme-color" content="#005087">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚾</text></svg>">
+<title>2026 就是棒 U10 秋季聯賽｜打擊統計系統</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:"Noto Sans TC",Arial,sans-serif;background:#f0f4f8;color:#222;min-height:100vh;}
+header{background:linear-gradient(135deg,#005087 0%,#003a63 100%);color:#fff;padding:20px 32px;display:flex;align-items:center;gap:16px;box-shadow:0 2px 8px rgba(0,0,0,.25);}
+header .icon{font-size:2.2rem;}
+header h1{font-size:1.4rem;font-weight:700;letter-spacing:.05em;}
+header p{font-size:.82rem;opacity:.8;margin-top:3px;}
+.badge{background:rgba(255,255,255,.2);border-radius:20px;padding:3px 12px;font-size:.75rem;margin-left:auto;white-space:nowrap;}
+nav{background:#fff;border-bottom:1px solid #dde3ea;display:flex;padding:0 24px;position:sticky;top:0;z-index:100;box-shadow:0 1px 4px rgba(0,0,0,.08);}
+nav button{padding:14px 22px;border:none;background:none;cursor:pointer;font-size:.9rem;font-weight:500;color:#666;border-bottom:3px solid transparent;transition:all .2s;}
+nav button.active{color:#005087;border-bottom-color:#005087;font-weight:700;}
+nav button:hover:not(.active){color:#005087;background:#f5f8ff;}
+.container{max-width:1300px;margin:0 auto;padding:24px 20px;}
+.cards-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}
+@media(max-width:900px){.cards-row{grid-template-columns:repeat(2,1fr);}}
+.card{background:#fff;border-radius:12px;padding:18px 20px;box-shadow:0 1px 6px rgba(0,0,0,.08);}
+.card.blue{border-left:4px solid #005087;} .card.green{border-left:4px solid #27ae60;}
+.card.orange{border-left:4px solid #e67e22;} .card.red{border-left:4px solid #e74c3c;}
+.card .label{font-size:.75rem;color:#888;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;}
+.card .value{font-size:1.7rem;font-weight:700;color:#222;line-height:1;}
+.card .sub{font-size:.78rem;color:#aaa;margin-top:5px;}
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;}
+@media(max-width:800px){.chart-grid{grid-template-columns:1fr;}}
+.chart-box{background:#fff;border-radius:12px;padding:20px;box-shadow:0 1px 6px rgba(0,0,0,.08);}
+.chart-box.full{grid-column:1/-1;}
+.chart-box h3{font-size:.95rem;color:#005087;margin-bottom:14px;font-weight:700;padding-bottom:8px;border-bottom:2px solid #e8eef5;}
+.chart-area{width:100%;height:280px;}
+.chart-area.tall{height:340px;}
+.tab-content{display:none;} .tab-content.active{display:block;}
+.player-selector{background:#fff;border-radius:12px;padding:18px 20px;box-shadow:0 1px 6px rgba(0,0,0,.08);margin-bottom:20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+.player-selector label{font-weight:700;color:#005087;font-size:.92rem;}
+.player-selector select{padding:8px 14px;border:2px solid #005087;border-radius:8px;font-size:.9rem;color:#222;cursor:pointer;outline:none;min-width:200px;background:#fff;}
+.player-selector select:focus{box-shadow:0 0 0 3px rgba(0,80,135,.15);}
+.player-cards{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:20px;}
+@media(max-width:1000px){.player-cards{grid-template-columns:repeat(3,1fr);}}
+.stat-card{background:#fff;border-radius:10px;padding:14px;text-align:center;box-shadow:0 1px 5px rgba(0,0,0,.07);}
+.stat-card .s-label{font-size:.72rem;color:#888;margin-bottom:4px;}
+.stat-card .s-val{font-size:1.35rem;font-weight:700;color:#005087;}
+.table-wrap{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,.08);margin-bottom:24px;}
+table{width:100%;border-collapse:collapse;font-size:.84rem;}
+th{background:#005087;color:#fff;padding:10px 12px;text-align:center;white-space:nowrap;position:sticky;top:0;}
+th.sortable{cursor:pointer;user-select:none;}
+th.sortable:hover{background:#003f6b;}
+th .sort-arrow{margin-left:4px;opacity:.6;}
+td{padding:9px 12px;text-align:center;border-bottom:1px solid #f0f2f5;white-space:nowrap;}
+tr:hover td{background:#f5f8ff;}
+tr.total-row td{background:#e8f0fa;font-weight:700;color:#005087;}
+.avg-hi{color:#27ae60;font-weight:700;} .avg-lo{color:#e74c3c;}
+.search-bar{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;align-items:center;}
+.search-bar input{padding:8px 14px;border:1.5px solid #ccc;border-radius:8px;font-size:.88rem;width:200px;outline:none;}
+.search-bar input:focus{border-color:#005087;}
+.upload-sec{background:#fff;border-radius:12px;padding:22px 24px;box-shadow:0 1px 6px rgba(0,0,0,.08);margin-bottom:20px;}
+.upload-sec h3{font-size:.95rem;color:#005087;font-weight:700;margin-bottom:16px;padding-bottom:8px;border-bottom:2px solid #e8eef5;}
+.guide-steps{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:20px;}
+.guide-step{display:flex;align-items:flex-start;gap:12px;flex:1;min-width:220px;background:#f5f8ff;border-radius:10px;padding:14px 16px;}
+.step-num{background:#005087;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;flex-shrink:0;}
+.step-text{font-size:.84rem;color:#444;line-height:1.5;}
+.step-text strong{color:#005087;display:block;margin-bottom:2px;}
+.btn-dl{background:#005087;color:#fff;border:none;border-radius:8px;padding:11px 22px;font-size:.9rem;cursor:pointer;font-weight:600;transition:background .2s;display:inline-flex;align-items:center;gap:8px;}
+.btn-dl:hover{background:#003f6b;}
+.btn-apply{background:#27ae60;color:#fff;border:none;border-radius:8px;padding:12px 28px;font-size:.95rem;cursor:pointer;font-weight:700;transition:background .2s;display:inline-flex;align-items:center;gap:8px;margin-top:8px;}
+.btn-apply:hover{background:#1e8449;}
+.btn-reset{background:#e74c3c;color:#fff;border:none;border-radius:8px;padding:12px 22px;font-size:.9rem;cursor:pointer;font-weight:600;transition:background .2s;display:inline-flex;align-items:center;gap:8px;margin-top:8px;margin-left:10px;}
+.btn-reset:hover{background:#c0392b;}
+.btn-setdefault{background:#e67e22;color:#fff;border:none;border-radius:8px;padding:12px 22px;font-size:.9rem;cursor:pointer;font-weight:600;transition:background .2s;display:inline-flex;align-items:center;gap:8px;margin-top:8px;margin-left:10px;}
+.btn-setdefault:hover{background:#ca6f1e;}
+.drop-zone{border:2.5px dashed #a0b4c8;border-radius:14px;padding:44px 20px;text-align:center;cursor:pointer;transition:all .25s;background:#f8fafd;color:#6a7f96;}
+.drop-zone:hover,.drop-zone.drag-over{border-color:#005087;background:#eef4fb;color:#005087;}
+.drop-zone .dz-icon{font-size:3rem;margin-bottom:10px;}
+.drop-zone p{margin:5px 0;font-size:.88rem;}
+.drop-zone .dz-hint{font-size:.78rem;color:#aaa;margin-top:8px;}
+.file-chosen{background:#e8f0fa;border-radius:8px;padding:10px 14px;margin-top:12px;font-size:.85rem;color:#005087;display:none;}
+#file-input{display:none;}
+.preview-info{background:#e8f5e9;border-radius:8px;padding:12px 16px;margin-bottom:14px;color:#2e7d32;font-size:.9rem;font-weight:600;}
+.upload-error{background:#fdecea;border-radius:8px;padding:14px 16px;color:#c62828;font-size:.9rem;}
+.success-msg{background:#e8f5e9;border:1.5px solid #a5d6a7;border-radius:8px;padding:13px 16px;color:#2e7d32;font-size:.92rem;font-weight:600;display:none;margin-top:14px;}
+.preview-wrap{overflow-x:auto;margin-top:8px;}
+.preview-table{width:100%;border-collapse:collapse;font-size:.8rem;min-width:600px;}
+.preview-table th{background:#005087;color:#fff;padding:8px 10px;white-space:nowrap;text-align:center;font-weight:600;}
+.preview-table td{padding:7px 10px;border-bottom:1px solid #f0f2f5;text-align:center;white-space:nowrap;}
+.col-guide-table{width:100%;border-collapse:collapse;font-size:.85rem;}
+.col-guide-table th{background:#f0f4f8;color:#005087;padding:10px 14px;text-align:left;font-weight:700;border-bottom:2px solid #dde3ea;}
+.col-guide-table td{padding:9px 14px;border-bottom:1px solid #f0f2f5;vertical-align:top;}
+.req{display:inline-block;background:#ffebe8;color:#c0392b;border-radius:8px;padding:1px 7px;font-size:.72rem;font-weight:700;margin-left:5px;}
+.opt{display:inline-block;background:#e8f5e9;color:#27ae60;border-radius:8px;padding:1px 7px;font-size:.72rem;font-weight:700;margin-left:5px;}
+.note-box{background:#fff8e1;border-left:4px solid #FFC000;border-radius:6px;padding:12px 16px;font-size:.84rem;color:#555;line-height:1.7;}
+.note-box strong{color:#e67e22;}
+/* ===== 打擊獎項 ===== */
+.award-wrap{overflow-x:auto;margin-bottom:24px;}
+.award-table{width:100%;border-collapse:separate;border-spacing:0;font-size:.84rem;min-width:900px;}
+.award-table thead tr:first-child th{background:#003a63;color:#fff;font-size:1rem;font-weight:800;letter-spacing:.06em;padding:14px 10px;text-align:center;}
+.award-table thead tr:first-child th:first-child{border-radius:12px 0 0 0;}
+.award-table thead tr:first-child th:last-child{border-radius:0 12px 0 0;}
+.award-table .sub-header{background:#e8f0fa;color:#005087;text-align:center;padding:6px 4px;font-size:.74rem;font-weight:700;border-bottom:2px solid #005087;border-left:1px solid #d0dcea;}
+.award-table tbody tr:nth-child(odd){background:#f8fafd;}
+.award-table tbody tr:nth-child(even){background:#fff;}
+.award-table tbody tr:hover td{background:#eef4fb;}
+.award-table td{padding:9px 8px;text-align:center;vertical-align:middle;border-bottom:1px solid #eef0f5;border-left:1px solid #eef0f5;white-space:nowrap;}
+.award-table td:first-child,.award-table td.rank-cell{border-left:none;}
+.award-table .rank-cell{font-weight:800;font-size:.9rem;color:#005087;background:transparent!important;padding:9px 12px;text-align:center;vertical-align:middle;}
+.rank-1 .rank-cell{color:#d4a800;}
+.rank-2 .rank-cell{color:#888;}
+.rank-3 .rank-cell{color:#a0522d;}
+.award-table .no-cell{font-size:.75rem;color:#666;background:#f5f5f5;padding:9px 5px;text-align:center;vertical-align:middle;}
+.award-table .name-cell{font-weight:700;color:#222;text-align:center;vertical-align:middle;padding:9px 8px;}
+.award-table .val-cell{font-weight:700;color:#005087;font-size:.92rem;text-align:center;vertical-align:middle;}
+.rank-1 .val-cell{color:#d4a800;font-size:1rem;}
+.award-table .sep-col{border-left:3px solid #005087!important;}
+.award-footnote{display:flex;align-items:flex-start;gap:10px;background:#fff8e1;border-left:4px solid #FFC000;border-radius:8px;padding:11px 16px;margin-top:12px;font-size:.82rem;color:#555;line-height:1.6;}
+.award-footnote strong{color:#e67e22;}
+.award-title-box{background:linear-gradient(135deg,#005087 0%,#003a63 100%);border-radius:12px;padding:18px 24px;margin-bottom:20px;display:flex;align-items:center;gap:14px;}
+.award-title-box .at-icon{font-size:2rem;}
+.award-title-box .at-text h2{color:#fff;font-size:1.1rem;font-weight:800;margin-bottom:2px;}
+.award-title-box .at-text p{color:rgba(255,255,255,.75);font-size:.8rem;}
+.award-note-mark{color:#FFC000;font-size:.85em;}
+/* ===== 守備記錄 ===== */
+.def-title-box{background:linear-gradient(135deg,#1a7f5a 0%,#0f5a3e 100%);border-radius:12px;padding:18px 24px;margin-bottom:20px;display:flex;align-items:center;gap:14px;}
+.def-title-box .at-icon{font-size:2rem;}
+.def-title-box .at-text h2{color:#fff;font-size:1.1rem;font-weight:800;margin-bottom:2px;}
+.def-title-box .at-text p{color:rgba(255,255,255,.75);font-size:.8rem;}
+.def-ctrl-bar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:18px;background:#fff;border-radius:10px;padding:14px 18px;box-shadow:0 1px 6px rgba(0,0,0,.07);}
+.def-ctrl-bar label{font-size:.85rem;font-weight:600;color:#444;}
+.def-ctrl-bar select{padding:7px 14px;border:1.5px solid #cdd5de;border-radius:8px;font-size:.85rem;background:#fff;cursor:pointer;outline:none;}
+.def-ctrl-bar select:focus{border-color:#1a7f5a;}
+.def-wrap{overflow-x:auto;border-radius:12px;box-shadow:0 1px 8px rgba(0,0,0,.08);}
+.def-table{width:100%;border-collapse:collapse;background:#fff;min-width:500px;}
+.def-table th{background:#1a7f5a;color:#fff;padding:10px 14px;font-size:.82rem;text-align:center;white-space:nowrap;}
+.def-table td{padding:9px 12px;font-size:.82rem;text-align:center;border-bottom:1px solid #eef0f4;vertical-align:middle;}
+.def-table tr:nth-child(even) td{background:#f8fffe;}
+.def-table tr:hover td{background:#e8f8f2;}
+.def-table .inning-sep{border-left:2px solid #b2dfcf;}
+.def-table .seq-cell{font-weight:700;color:#1a7f5a;}
+.def-table .player-cell{text-align:left;font-weight:500;}
+.pos-badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:.76rem;font-weight:700;background:#e3f6ee;color:#0f5a3e;white-space:nowrap;margin:2px;}
+.pos-badge.error{background:#fdecea;color:#c0392b;border:1px solid #f5c6cb;}
+.def-legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:14px;padding:10px 14px;background:#f8fffe;border-radius:8px;border:1px solid #d4edda;}
+.def-legend-item{display:flex;align-items:center;gap:6px;font-size:.78rem;color:#555;}
+.def-legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.def-summary{margin-top:12px;font-size:.84rem;color:#555;padding:8px 14px;background:#f0f4f8;border-radius:8px;}
+/* ===== 守備排行榜 ===== */
+.defrank-title-box{background:linear-gradient(135deg,#7b2d8b 0%,#4a1259 100%);border-radius:12px;padding:18px 24px;margin-bottom:20px;display:flex;align-items:center;gap:14px;}
+.defrank-title-box .at-icon{font-size:2rem;}
+.defrank-title-box .at-text h2{color:#fff;font-size:1.1rem;font-weight:800;margin-bottom:2px;}
+.defrank-title-box .at-text p{color:rgba(255,255,255,.75);font-size:.8rem;}
+.defrank-cards{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:22px;}
+.defrank-card{flex:1;min-width:130px;background:#fff;border-radius:12px;padding:16px 18px;box-shadow:0 2px 10px rgba(0,0,0,.08);text-align:center;}
+.defrank-card .dr-label{font-size:.78rem;color:#888;margin-bottom:4px;}
+.defrank-card .dr-val{font-size:1.6rem;font-weight:800;color:#7b2d8b;}
+.defrank-card .dr-sub{font-size:.72rem;color:#aaa;margin-top:2px;}
+.defrank-card.red .dr-val{color:#c0392b;}
+.defrank-card.green .dr-val{color:#1a7f5a;}
+.defrank-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:22px;}
+@media(max-width:700px){.defrank-grid{grid-template-columns:1fr;}}
+.defrank-panel{background:#fff;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.08);overflow:hidden;}
+.defrank-panel-hd{background:#7b2d8b;color:#fff;padding:10px 16px;font-size:.88rem;font-weight:700;display:flex;align-items:center;gap:8px;}
+.defrank-panel-hd.green{background:#1a7f5a;}
+.defrank-panel-hd.red{background:#c0392b;}
+.defrank-panel-hd.blue{background:#005087;}
+.defrank-table{width:100%;border-collapse:collapse;}
+.defrank-table th{background:#f0eaf6;color:#7b2d8b;padding:8px 12px;font-size:.78rem;text-align:center;white-space:nowrap;border-bottom:2px solid #d5b8e8;}
+.defrank-table th.green{background:#e8f8f2;color:#1a7f5a;border-bottom-color:#b2dfcf;}
+.defrank-table th.red{background:#fdecea;color:#c0392b;border-bottom-color:#f5c6cb;}
+.defrank-table th.blue{background:#e8f0fa;color:#005087;border-bottom-color:#b8d0ea;}
+.defrank-table td{padding:8px 12px;font-size:.82rem;text-align:center;border-bottom:1px solid #f0ecf7;vertical-align:middle;}
+.defrank-table tr:nth-child(even) td{background:#faf7fd;}
+.defrank-table tr:hover td{background:#f3ecfa;}
+.defrank-table .rank-no{font-weight:800;font-size:.85rem;color:#7b2d8b;width:36px;}
+.defrank-table .rank-no.r1{color:#d4a800;}
+.defrank-table .rank-no.r2{color:#888;}
+.defrank-table .rank-no.r3{color:#a0522d;}
+.defrank-table .pname{font-weight:700;color:#222;text-align:left;}
+.defrank-table .val-hi{font-weight:800;color:#1a7f5a;}
+.defrank-table .val-err{font-weight:800;color:#c0392b;}
+.defrank-detail-wrap{background:#fff;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.08);overflow:hidden;margin-bottom:10px;}
+.defrank-detail-hd{background:linear-gradient(90deg,#7b2d8b,#005087);color:#fff;padding:12px 18px;font-size:.92rem;font-weight:700;}
+.defrank-detail-table{width:100%;border-collapse:collapse;min-width:780px;}
+.defrank-detail-table th{background:#f5f0fa;color:#444;padding:9px 10px;font-size:.77rem;text-align:center;white-space:nowrap;border-bottom:2px solid #d5b8e8;}
+.defrank-detail-table th.grp{background:#7b2d8b;color:#fff;}
+.defrank-detail-table th.grp2{background:#1a7f5a;color:#fff;}
+.defrank-detail-table th.grp3{background:#c0392b;color:#fff;}
+.defrank-detail-table td{padding:8px 10px;font-size:.8rem;text-align:center;border-bottom:1px solid #f0ecf7;vertical-align:middle;}
+.defrank-detail-table tr:nth-child(even) td{background:#faf7fd;}
+.defrank-detail-table tr:hover td{background:#f3ecfa;}
+.defrank-detail-table .sticky-left{font-weight:700;text-align:left;white-space:nowrap;color:#222;}
+.defrank-chart-row{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:22px;}
+@media(max-width:700px){.defrank-chart-row{grid-template-columns:1fr;}}
+/* ===== 守備獎項 TAB 9 ===== */
+.defaward-title-box{background:linear-gradient(135deg,#c0392b 0%,#8e1a0e 100%);border-radius:12px;padding:18px 24px;margin-bottom:20px;display:flex;align-items:center;gap:14px;}
+.defaward-title-box .at-icon{font-size:2rem;}
+.defaward-title-box .at-text h2{color:#fff;font-size:1.1rem;font-weight:800;margin-bottom:2px;}
+.defaward-title-box .at-text p{color:rgba(255,255,255,.75);font-size:.8rem;}
+.defaward-wrap{overflow-x:auto;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.10);}
+.defaward-table{width:100%;border-collapse:collapse;background:#fff;min-width:1100px;}
+.defaward-table th{padding:9px 10px;font-size:.78rem;text-align:center;white-space:nowrap;border-bottom:2px solid #e8d5d5;}
+.defaward-table td{padding:9px 10px;font-size:.80rem;text-align:center;vertical-align:middle;border-bottom:1px solid #f5eaea;white-space:nowrap;}
+.defaward-table tr:nth-child(even) td{background:#fdf8f8;}
+.defaward-table tr:hover td{background:#fdecea;}
+.defaward-th-rank{background:#8e1a0e;color:#fff;width:52px;font-weight:700;}
+.defaward-th-main{background:#c0392b;color:#fff;font-weight:700;font-size:.80rem;}
+.defaward-th-main.gold{background:#b8860b;}
+.defaward-th-sub{background:#f5eaea;color:#8e1a0e;font-size:.75rem;font-weight:600;}
+.defaward-th-sub.gold{background:#fff8e1;color:#7a5800;}
+.defaward-sep{border-left:3px solid #c0392b !important;}
+.defaward-sep.gold{border-left:3px solid #b8860b !important;}
+.defaward-rank-cell{font-weight:800;font-size:.88rem;color:#c0392b;}
+.defaward-rank-cell.r1{color:#d4a800;font-size:1rem;}
+.defaward-rank-cell.r2{color:#888;}
+.defaward-rank-cell.r3{color:#a0522d;}
+.defaward-no{font-size:.74rem;color:#666;background:#f5f0f0;padding:3px 6px;border-radius:6px;}
+.defaward-name{font-weight:700;color:#222;}
+.defaward-val{font-weight:800;color:#1a7f5a;}
+.defaward-empty{color:#ccc;font-size:.78rem;}
+.defaward-footnote{display:flex;align-items:flex-start;gap:10px;background:#fff8e1;border-left:4px solid #b8860b;border-radius:8px;padding:11px 16px;margin-top:14px;font-size:.82rem;color:#555;line-height:1.6;}
+/* ===== 手動調整 TAB ===== */
+.adj-title-box{background:linear-gradient(135deg,#2c3e50 0%,#005087 100%);border-radius:12px;padding:18px 24px;margin-bottom:20px;display:flex;align-items:center;gap:14px;}
+.adj-title-box .at-icon{font-size:2rem;}
+.adj-title-box .at-text h2{color:#fff;font-size:1.1rem;font-weight:800;margin-bottom:2px;}
+.adj-title-box .at-text p{color:rgba(255,255,255,.75);font-size:.8rem;}
+.adj-form-card{background:#fff;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.08);padding:22px 24px;}
+.adj-form-card h3{font-size:.95rem;font-weight:800;color:#2c3e50;margin-bottom:16px;border-left:4px solid #005087;padding-left:10px;}
+.adj-form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;}
+.adj-field{display:flex;flex-direction:column;gap:5px;}
+.adj-field label{font-size:.8rem;font-weight:700;color:#555;}
+.adj-field select{padding:8px 12px;border:1.5px solid #cdd5de;border-radius:8px;font-size:.88rem;background:#fff;outline:none;cursor:pointer;}
+.adj-field select:focus{border-color:#005087;}
+.adj-btn-add{background:linear-gradient(135deg,#005087,#003a63);color:#fff;border:none;border-radius:9px;padding:10px 24px;font-size:.88rem;font-weight:700;cursor:pointer;letter-spacing:.5px;transition:opacity .15s;}
+.adj-btn-add:hover{opacity:.85;}
+.adj-list-table{width:100%;border-collapse:collapse;background:#fff;font-size:.82rem;min-width:500px;}
+.adj-list-table th{background:#2c3e50;color:#fff;padding:9px 10px;font-size:.78rem;text-align:center;white-space:nowrap;}
+.adj-list-table td{padding:9px 12px;text-align:center;border-bottom:1px solid #eef0f4;vertical-align:middle;}
+.adj-list-table tr:hover td{background:#f0f6fc;}
+.adj-stat-card{background:#f0f6fc;border-radius:10px;padding:12px 20px;border:1px solid #d0e4f5;min-width:120px;text-align:center;}
+.adj-stat-label{font-size:.76rem;color:#666;margin-bottom:4px;}
+.adj-stat-val{font-size:1.3rem;font-weight:800;color:#2c3e50;}
+.adj-impact-table{width:100%;border-collapse:collapse;background:#fff;font-size:.82rem;min-width:400px;}
+.adj-impact-table th{background:#005087;color:#fff;padding:9px 12px;font-size:.78rem;text-align:center;}
+.adj-impact-table td{padding:8px 12px;text-align:center;border-bottom:1px solid #eef0f4;}
+.adj-impact-table tr:hover td{background:#f0f6fc;}
+/* ===== 打擊記錄 TAB ===== */
+.bat-title-box{background:linear-gradient(135deg,#e67e22 0%,#a04000 100%);border-radius:12px;padding:18px 24px;margin-bottom:20px;display:flex;align-items:center;gap:14px;}
+.bat-title-box .at-icon{font-size:2rem;}
+.bat-title-box .at-text h2{color:#fff;font-size:1.1rem;font-weight:800;margin-bottom:2px;}
+.bat-title-box .at-text p{color:rgba(255,255,255,.75);font-size:.8rem;}
+.bat-ctrl-bar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:18px;background:#fff;border-radius:10px;padding:14px 18px;box-shadow:0 1px 6px rgba(0,0,0,.07);}
+.bat-ctrl-bar label{font-size:.85rem;font-weight:600;color:#444;}
+.bat-ctrl-bar select{padding:7px 14px;border:1.5px solid #cdd5de;border-radius:8px;font-size:.85rem;background:#fff;cursor:pointer;outline:none;}
+.bat-ctrl-bar select:focus{border-color:#e67e22;}
+.bat-wrap{overflow-x:auto;border-radius:12px;box-shadow:0 1px 8px rgba(0,0,0,.08);}
+.bat-table{width:100%;border-collapse:collapse;background:#fff;min-width:600px;}
+.bat-table th{background:#e67e22;color:#fff;padding:10px 14px;font-size:.82rem;text-align:center;white-space:nowrap;}
+.bat-table td{padding:9px 12px;font-size:.82rem;text-align:center;border-bottom:1px solid #eef0f4;vertical-align:middle;}
+.bat-table tr:nth-child(even) td{background:#fef9f5;}
+.bat-table tr:hover td{background:#fdebd0;}
+.bat-table .inning-sep{border-left:2px solid #f0c080;}
+.bat-table .seq-cell{font-weight:700;color:#a04000;}
+.bat-badge{display:inline-block;padding:3px 8px;border-radius:12px;font-size:.74rem;font-weight:700;white-space:nowrap;margin:1px;line-height:1.4;}
+.bat-badge.hit1b{background:#d5e8d4;color:#2d6a4f;border:1px solid #b2dfbb;}
+.bat-badge.hit2b{background:#dae8fc;color:#1a5276;border:1px solid #b0d0f0;}
+.bat-badge.hit3b{background:#fff3cd;color:#7a4400;border:1px solid #ffe08a;}
+.bat-badge.hithr{background:#ffe0e0;color:#922b21;border:1px solid #f5b7b1;}
+.bat-badge.hitbb{background:#e8f8f5;color:#0e6655;border:1px solid #a9dfbf;}
+.bat-badge.hitkk{background:#f5eef8;color:#6c3483;border:1px solid #d7bde2;}
+.bat-badge.hitfo{background:#fdf2e9;color:#784212;border:1px solid #f0c080;}
+.bat-badge.hitgo{background:#eaf2fb;color:#1a5276;border:1px solid #aed6f1;}
+.bat-badge.hitnone{background:#f0f3f4;color:#717d7e;border:1px solid #d5d8dc;}
+.bat-badge.hithp{background:#fde8e8;color:#922b21;border:1px solid #f5b7b1;}
+.bat-badge.hiterr{background:#fdedec;color:#c0392b;border:1px solid #f5c6cb;}
+.bat-badge.hitfc{background:#e8eaf6;color:#283593;border:1px solid #9fa8da;}
+.bat-legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;padding:10px 14px;background:#fef9f5;border-radius:8px;border:1px solid #f5cba7;}
+.bat-legend-item{display:flex;align-items:center;gap:6px;font-size:.76rem;color:#555;}
+.bat-summary{margin-top:12px;font-size:.84rem;color:#555;padding:8px 14px;background:#fef9f5;border-radius:8px;border:1px solid #f5cba7;}
+/* ===== 打擊記錄 — 統計彙整表 ===== */
+#bat-stats-section{margin-top:28px;}
+#bat-stats-section .bst-title{display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,#005087 0%,#003a63 100%);border-radius:10px;padding:14px 20px;margin-bottom:16px;}
+#bat-stats-section .bst-title h3{color:#fff;font-size:1rem;font-weight:800;margin:0;}
+#bat-stats-section .bst-title p{color:rgba(255,255,255,.75);font-size:.78rem;margin:0;}
+
+.bst-wrap{overflow-x:auto;border-radius:10px;box-shadow:0 1px 8px rgba(0,0,0,.08);}
+.bst-table{width:100%;border-collapse:collapse;background:#fff;min-width:700px;}
+.bst-table th{background:#005087;color:#fff;padding:9px 12px;font-size:.79rem;text-align:center;white-space:nowrap;}
+.bst-table th.sep{border-left:2px solid #fff5;}
+.bst-table td{padding:8px 11px;font-size:.81rem;text-align:center;border-bottom:1px solid #eef0f4;}
+.bst-table tr:nth-child(even) td{background:#f0f6fc;}
+.bst-table tr:hover td{background:#dbeafe;}
+.bst-table .td-no{font-weight:700;color:#005087;}
+.bst-table .td-name{font-weight:700;text-align:left;white-space:nowrap;}
+.bst-table .td-avg-hi{color:#c0392b;font-weight:800;}
+.bst-table .td-avg-lo{color:#7f8c8d;}
+.bst-table .td-zero{color:#ccc;}
+.bst-table .sep{border-left:2px solid #b0c8e0;}
+/* ===== 手動調整頁簼 ===== */
+.adjust-title-box{background:linear-gradient(135deg,#7b3f00 0%,#4a2000 100%);border-radius:12px;padding:18px 24px;margin-bottom:20px;display:flex;align-items:center;gap:14px;}
+.adjust-title-box .at-icon{font-size:2rem;}
+.adjust-title-box .at-text h2{color:#fff;font-size:1.1rem;font-weight:800;margin-bottom:2px;}
+.adjust-title-box .at-text p{color:rgba(255,255,255,.75);font-size:.8rem;}
+.adjust-form-box{background:#fff;border-radius:12px;padding:22px 26px;box-shadow:0 2px 10px rgba(0,0,0,.08);margin-bottom:22px;}
+.adjust-form-box h3{font-size:.95rem;color:#7b3f00;font-weight:800;margin-bottom:16px;padding-bottom:8px;border-bottom:2px solid #f5e0c8;display:flex;align-items:center;gap:8px;}
+.adjust-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px;}
+@media(max-width:900px){.adjust-grid{grid-template-columns:1fr 1fr;}}
+@media(max-width:600px){.adjust-grid{grid-template-columns:1fr;}}
+.adjust-field{display:flex;flex-direction:column;gap:5px;}
+.adjust-field label{font-size:.8rem;font-weight:700;color:#555;letter-spacing:.03em;}
+.adjust-field select,.adjust-field input[type=number]{padding:9px 12px;border:1.5px solid #d0c0b0;border-radius:8px;font-size:.88rem;background:#fff;outline:none;transition:border .15s;}
+.adjust-field select:focus,.adjust-field input[type=number]:focus{border-color:#7b3f00;box-shadow:0 0 0 3px rgba(123,63,0,.1);}
+.adjust-arrow{display:flex;align-items:center;justify-content:center;padding:8px;color:#e67e22;font-size:1.5rem;font-weight:900;}
+.adjust-note-box{background:#fff8e1;border-left:4px solid #FFC000;border-radius:8px;padding:13px 16px;font-size:.84rem;color:#555;line-height:1.7;margin-bottom:20px;}
+.btn-adjust-add{background:#7b3f00;color:#fff;border:none;border-radius:8px;padding:12px 28px;font-size:.95rem;cursor:pointer;font-weight:700;transition:background .2s;display:inline-flex;align-items:center;gap:8px;}
+.btn-adjust-add:hover{background:#5a2d00;}
+.btn-adjust-del{background:#e74c3c;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:.82rem;cursor:pointer;font-weight:600;transition:background .2s;}
+.btn-adjust-del:hover{background:#c0392b;}
+.btn-adjust-export{background:#27ae60;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:.88rem;cursor:pointer;font-weight:700;transition:background .2s;display:inline-flex;align-items:center;gap:8px;}
+.btn-adjust-export:hover{background:#1e8449;}
+.btn-adjust-clear{background:#95a5a6;color:#fff;border:none;border-radius:8px;padding:10px 18px;font-size:.88rem;cursor:pointer;font-weight:600;transition:background .2s;display:inline-flex;align-items:center;gap:8px;}
+.btn-adjust-clear:hover{background:#7f8c8d;}
+.adjust-log-table{width:100%;border-collapse:collapse;font-size:.83rem;}
+.adjust-log-table th{background:#7b3f00;color:#fff;padding:9px 12px;text-align:center;white-space:nowrap;}
+.adjust-log-table td{padding:9px 12px;text-align:center;border-bottom:1px solid #f0ece8;vertical-align:middle;white-space:nowrap;}
+.adjust-log-table tr:nth-child(even) td{background:#fdf5ee;}
+.adjust-log-table tr:hover td{background:#fde9d5;}
+.adjust-preview-box{background:#f5e0c8;border-radius:8px;padding:14px 18px;font-size:.88rem;color:#4a2000;font-weight:600;margin-bottom:16px;display:none;}
+.adj-badge-from{background:#fdecea;color:#c0392b;padding:3px 10px;border-radius:10px;font-weight:700;font-size:.82rem;margin:0 4px;}
+.adj-badge-to{background:#e8f8f2;color:#1a7f5a;padding:3px 10px;border-radius:10px;font-weight:700;font-size:.82rem;margin:0 4px;}
+.adj-impact-box{background:#e8f0fa;border-radius:8px;padding:14px 18px;font-size:.85rem;color:#003a63;margin-top:14px;display:none;}
+.adj-impact-row{display:flex;align-items:center;gap:10px;margin-bottom:4px;}
+.adj-tag{display:inline-block;padding:2px 9px;border-radius:8px;font-size:.75rem;font-weight:700;}
+.adj-tag.r{background:#fdecea;color:#c0392b;} .adj-tag.g{background:#e8f8f2;color:#1a7f5a;}
+/* 守備獎項 — 並列球員對齊格 */
+.da-slot{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:46px;padding:5px 0;box-sizing:border-box;}
+.da-slot+.da-slot{border-top:1px dashed #f0d8d8;}
+.defaward-table td{padding:0 10px !important;}
+</style>
+</head>
+<body>
+<header>
+  <div class="icon">⚾</div>
+  <div>
+    <h1>2026 就是棒全國社區棒球秋季聯賽（U10）</h1>
+    <p id="header-subtitle">打擊統計分析系統｜共 4 場賽事</p>
+  </div>
+  <div class="badge" id="header-badge">21 位球員 · 即時統計</div>
+</header>
+
+<nav>
+  <button class="active" onclick="switchTab('team',this)">🏆 全隊總覽</button>
+  <button onclick="switchTab('player',this)">👤 球員個人</button>
+  <button onclick="switchTab('ranking',this)">📊 打擊排行</button>
+  <button onclick="switchTab('batting',this)">⚾ 打擊記錄</button>
+  <button onclick="switchTab('awards',this)">🏅 打擊獎項</button>
+  <button onclick="switchTab('defranking',this)">🏆 守備排行</button>
+  <button onclick="switchTab('defense',this)">🛡️ 守備記錄</button>
+  <button onclick="switchTab('defawards',this)">🥊 守備獎項</button>
+  <button onclick="switchTab('upload',this)">📁 資料上傳</button>
+  <button onclick="switchTab('adjust',this)">⚙️ 手動調整</button>
+</nav>
+
+<div class="container">
+
+<!-- TAB 1 -->
+<div id="tab-team" class="tab-content active">
+  <div class="cards-row" id="team-cards"></div>
+  <div class="chart-grid">
+    <div class="chart-box full"><h3>📈 各場次打擊趨勢</h3><div class="chart-area tall" id="chart-team-avg"></div></div>
+    <div class="chart-box"><h3>🔢 各場次安打類型分布</h3><div class="chart-area" id="chart-team-hits"></div></div>
+    <div class="chart-box"><h3>🏃 各場次得分 / 打點</h3><div class="chart-area" id="chart-team-rbi"></div></div>
+  </div>
+</div>
+
+<!-- TAB 2 -->
+<div id="tab-player" class="tab-content">
+  <div class="player-selector">
+    <label>選擇球員：</label>
+    <select id="player-select" onchange="renderPlayerChart()"></select>
+  </div>
+  <div class="player-cards" id="player-stat-cards"></div>
+  <div class="chart-box"><h3 id="player-chart-title">球員各場次打擊趨勢</h3><div class="chart-area tall" id="chart-player"></div></div>
+  <!-- 守備圖表區（動態顯示，由 JS 控制） -->
+  <div id="player-def-section" style="display:none;margin-top:32px;">
+    <div class="chart-box full"><h3 id="player-def-title1">🛡️ 全隊累積 — 各場次守備數據總覽</h3><div class="chart-area tall" id="chart-player-def1"></div></div>
+  </div>
+</div>
+
+<!-- TAB 3 -->
+<div id="tab-ranking" class="tab-content">
+  <div class="search-bar">
+    <input type="text" id="search-input" placeholder="🔍 搜尋球員姓名..." oninput="filterTable()">
+    <span style="font-size:.82rem;color:#888;">點擊欄位標題可排序</span>
+  </div>
+  <div class="table-wrap"><table id="ranking-table"><thead></thead><tbody></tbody></table></div>
+  <div class="chart-grid">
+    <div class="chart-box"><h3>🏅 累積打擊率 Top 10</h3><div class="chart-area" id="chart-rank-avg"></div><div id="rank-avg-footnote" style="margin-top:10px;padding:8px 12px;background:#fff8e1;border-left:3px solid #FFC000;border-radius:5px;font-size:.78rem;color:#7a5800;"></div></div>
+    <div class="chart-box"><h3>🎯 累積安打數 Top 10</h3><div class="chart-area" id="chart-rank-hits"></div></div>
+  </div>
+</div>
+
+<!-- TAB 4 -->
+<div id="tab-awards" class="tab-content">
+  <div class="award-title-box">
+    <div class="at-icon">🏅</div>
+    <div class="at-text">
+      <h2>打擊獎項 — 各項目 Top 3</h2>
+      <p>依據累積成績自動計算，資料即時同步更新</p>
+    </div>
+  </div>
+  <div class="award-wrap">
+    <table class="award-table" id="award-table">
+      <thead>
+        <tr>
+          <th rowspan="3" style="width:60px;border-radius:12px 0 0 0;">排序</th>
+          <th colspan="3">🥇 打擊王 <span class="award-note-mark">※</span><br><span style="font-size:.78rem;font-weight:500;">打擊率 AVG</span></th>
+          <th colspan="3" class="sep-col">💥 安打王<br><span style="font-size:.78rem;font-weight:500;">安打 H</span></th>
+          <th colspan="3" class="sep-col">🚀 全壘打王<br><span style="font-size:.78rem;font-weight:500;">全壘打 HR</span></th>
+          <th colspan="3" class="sep-col">🎯 打點王<br><span style="font-size:.78rem;font-weight:500;">打點 RBI</span></th>
+          <th colspan="3" class="sep-col">🏃 得分王<br><span style="font-size:.78rem;font-weight:500;">得分 R</span></th>
+          <th colspan="3" class="sep-col">📊 上壘王 <span class="award-note-mark">※</span><br><span style="font-size:.78rem;font-weight:500;">上壘率 OBP</span></th>
+          <th colspan="3" class="sep-col">💪 長打王 <span class="award-note-mark">※</span><br><span style="font-size:.78rem;font-weight:500;">長打率 SLG</span></th>
+          <th colspan="3" class="sep-col">⚡ 攻擊王 <span class="award-note-mark">※</span><br><span style="font-size:.78rem;font-weight:500;">攻擊指數 OPS</span></th>
+        </tr>
+        <tr id="award-subheader"></tr>
+      </thead>
+      <tbody id="award-tbody"></tbody>
+    </table>
+    <div class="award-footnote">
+      ※ 資格門檻：累積打數 &ge; <span id="fn-games">?</span> 場 × 2 = <span id="fn-threshold">?</span> 打數（不達門檻者不列入排名）
+    </div>
+  </div>
+</div>
+
+<!-- TAB 打擊記錄 -->
+<div id="tab-batting" class="tab-content">
+  <div class="def-title-box" style="background:linear-gradient(135deg,#b94a00 0%,#7a2e00 100%);">
+    <div class="at-icon">⚾</div>
+    <div class="at-text">
+      <h2>打擊記錄 — 各場逐打席明細</h2>
+      <p>依場次或球員查看，含打擊結果、打點與得分資訊</p>
+    </div>
+  </div>
+  <div class="def-ctrl-bar">
+    <label>查看方式：</label>
+    <select id="bat-view-mode" onchange="switchBatViewMode(this.value)">
+      <option value="game">📌 依場次查看</option>
+      <option value="player">👤 依球員查看</option>
+    </select>
+    <div id="bat-game-ctrl" style="display:flex;align-items:center;gap:8px;">
+      <label>場次：</label>
+      <select id="bat-game-sel" onchange="renderBatting()"></select>
+    </div>
+    <div id="bat-player-ctrl" style="display:none;align-items:center;gap:8px;">
+      <label>球員：</label>
+      <select id="bat-player-sel" onchange="renderBatting()"></select>
+    </div>
+  </div>
+  <div class="bat-wrap">
+    <table class="bat-table" id="bat-main-table">
+      <thead><tr id="bat-thead-row"></tr></thead>
+      <tbody id="bat-tbody"></tbody>
+    </table>
+  </div>
+  <p class="def-summary" id="bat-summary"></p>
+  <div class="def-legend">
+    <div class="def-legend-item"><div class="def-legend-dot" style="background:#fff8e1;border:1px solid #ffe082;"></div><span>安打（1B/2B/3B/HR）</span></div>
+    <div class="def-legend-item"><div class="def-legend-dot" style="background:#e8f5e9;border:1px solid #a5d6a7;"></div><span>上壘（BB/HP）</span></div>
+    <div class="def-legend-item"><div class="def-legend-dot" style="background:#fdecea;border:1px solid #f5c6cb;"></div><span>出局（GO/FO/K/FC/E）</span></div>
+    <div class="def-legend-item"><div class="def-legend-dot" style="background:#e3f0ff;border:1px solid #90caf9;"></div><span>有打點 RBI ≥ 1 ⭐</span></div>
+  </div>
+  <!-- 打擊統計彙整區 -->
+  <div id="bat-stats-section"></div>
+</div>
+
+<!-- TAB 6: 守備記錄 -->
+<div id="tab-defense" class="tab-content">
+  <div class="def-title-box">
+    <div class="at-icon">🛡️</div>
+    <div class="at-text">
+      <h2>守備記錄 — 各場守備位置明細</h2>
+      <p>依場次或球員查看，守備失誤以紅色標示</p>
+    </div>
+  </div>
+  <div class="def-ctrl-bar">
+    <label>查看方式：</label>
+    <select id="def-view-mode" onchange="switchDefViewMode(this.value)">
+      <option value="game">📌 依場次查看</option>
+      <option value="player">👤 依球員查看</option>
+    </select>
+    <div id="def-game-ctrl" style="display:flex;align-items:center;gap:8px;">
+      <label>場次：</label>
+      <select id="def-game-sel" onchange="renderDefense()"></select>
+    </div>
+    <div id="def-player-ctrl" style="display:none;align-items:center;gap:8px;">
+      <label>球員：</label>
+      <select id="def-player-sel" onchange="renderDefense()"></select>
+    </div>
+  </div>
+  <div class="def-wrap">
+    <table class="def-table">
+      <thead><tr id="def-thead-row"></tr></thead>
+      <tbody id="def-tbody"></tbody>
+    </table>
+  </div>
+  <p class="def-summary" id="def-summary"></p>
+  <div class="def-legend">
+    <div class="def-legend-item"><div class="def-legend-dot" style="background:#e3f6ee;border:1px solid #b2dfcf;"></div><span>一般守備</span></div>
+    <div class="def-legend-item"><div class="def-legend-dot" style="background:#fdecea;border:1px solid #f5c6cb;"></div><span>守備失誤（E）❗</span></div>
+  </div>
+</div>
+
+<!-- TAB 8: 守備排行榜 -->
+<div id="tab-defranking" class="tab-content">
+  <div class="defrank-title-box">
+    <div class="at-icon">🏆</div>
+    <div class="at-text">
+      <h2>守備排行榜 — 全季守備表現分析</h2>
+      <p>依據守備記錄自動彙整，含守備次數、出局貢獻、失誤與守備率</p>
+    </div>
+  </div>
+  <div class="defrank-cards" id="defrank-summary-cards"></div>
+  <div class="defrank-grid">
+    <div class="defrank-panel">
+      <div class="defrank-panel-hd">🥇 守備次數排行</div>
+      <table class="defrank-table"><thead><tr><th>名次</th><th>背號</th><th class="pname">球員</th><th>守備次數</th><th>出局貢獻</th></tr></thead><tbody id="dr-total-tbody"></tbody></table>
+    </div>
+    <div class="defrank-panel">
+      <div class="defrank-panel-hd green">⚡ 出局貢獻排行</div>
+      <table class="defrank-table"><thead><tr><th>名次</th><th>背號</th><th class="pname">球員</th><th class="green">出局數</th><th class="green">GO</th><th class="green">FO</th><th class="green">FC</th></tr></thead><tbody id="dr-outs-tbody"></tbody></table>
+    </div>
+    <div class="defrank-panel">
+      <div class="defrank-panel-hd blue">🛡️ 守備率排行（FPCT）</div>
+      <table class="defrank-table"><thead><tr><th>名次</th><th>背號</th><th class="pname">球員</th><th class="blue">FPCT</th><th class="blue">守備次數</th><th class="blue">失誤</th></tr></thead><tbody id="dr-fpct-tbody"></tbody></table>
+    </div>
+    <div class="defrank-panel">
+      <div class="defrank-panel-hd red">❗ 失誤次數排行</div>
+      <table class="defrank-table"><thead><tr><th>名次</th><th>背號</th><th class="pname">球員</th><th class="red">失誤數</th><th class="red">失誤內野</th><th class="red">失誤外野</th></tr></thead><tbody id="dr-err-tbody"></tbody></table>
+    </div>
+  </div>
+  <div class="defrank-chart-row">
+    <div class="chart-box"><h3>⚡ 出局貢獻 — 各球員守備內容分布</h3><div class="chart-area" id="chart-defrank-outs"></div></div>
+    <div class="chart-box"><h3>🛡️ 守備率 FPCT — 各球員比較</h3><div class="chart-area" id="chart-defrank-fpct"></div></div>
+  </div>
+  <div class="defrank-detail-wrap">
+    <div class="defrank-detail-hd">📋 守備詳細數據總表</div>
+    <div style="overflow-x:auto;">
+      <table class="defrank-detail-table">
+        <thead>
+          <tr>
+            <th rowspan="2" style="background:#34495e;color:#fff;">背號</th>
+            <th rowspan="2" style="background:#34495e;color:#fff;">姓名</th>
+            <th colspan="3" class="grp">守備整體</th>
+            <th colspan="5" class="grp2">出局貢獻</th>
+            <th colspan="2" class="grp3">失誤明細</th>
+          </tr>
+          <tr>
+            <th>守備次數</th><th>守備率 FPCT</th><th>失誤</th>
+            <th>GO</th><th>FO(外)</th><th>FO(內)</th><th>FC</th><th>DP</th>
+            <th>E(外)</th><th>E(內)</th>
+          </tr>
+        </thead>
+        <tbody id="defrank-detail-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 9: 守備獎項 -->
+<div id="tab-defawards" class="tab-content">
+  <div class="defaward-title-box">
+    <div class="at-icon">🥊</div>
+    <div class="at-text">
+      <h2>守備獎項 — 各守備位置 Top 3</h2>
+      <p>依據 DEFENSE_DATA 各位置守備率 FPCT 自動排行，同 FPCT 者守備次數多者優先</p>
+    </div>
+  </div>
+  <div class="defaward-wrap">
+    <table class="defaward-table" id="defaward-table">
+      <thead>
+        <tr>
+          <th rowspan="2" class="defaward-th-rank">排序</th>
+          <th colspan="3" class="defaward-th-main gold">🛡️ 守備王</th>
+          <th colspan="3" class="defaward-th-main defaward-sep">1️⃣ 一壘金手套 (1B)</th>
+          <th colspan="3" class="defaward-th-main defaward-sep">2️⃣ 二壘金手套 (2B)</th>
+          <th colspan="3" class="defaward-th-main defaward-sep">3️⃣ 三壘金手套 (3B)</th>
+          <th colspan="3" class="defaward-th-main defaward-sep">⚡ 游擊金手套 (SS)</th>
+          <th colspan="3" class="defaward-th-main defaward-sep">⚾ 投手金手套 (P)</th>
+          <th colspan="3" class="defaward-th-main defaward-sep">🎯 補手金手套 (C)</th>
+          <th colspan="3" class="defaward-th-main defaward-sep">🌟 中外野金手套 (CF)</th>
+          <th colspan="3" class="defaward-th-main defaward-sep">🏃 左外野金手套 (LF)</th>
+          <th colspan="3" class="defaward-th-main defaward-sep">🎯 右外野金手套 (RF)</th>
+        </tr>
+        <tr>
+          <th class="defaward-th-sub gold">背號</th><th class="defaward-th-sub gold">球員</th><th class="defaward-th-sub gold">守備率 FPCT</th>
+          <th class="defaward-th-sub defaward-sep">背號</th><th class="defaward-th-sub">球員</th><th class="defaward-th-sub">守備率 FPCT</th>
+          <th class="defaward-th-sub defaward-sep">背號</th><th class="defaward-th-sub">球員</th><th class="defaward-th-sub">守備率 FPCT</th>
+          <th class="defaward-th-sub defaward-sep">背號</th><th class="defaward-th-sub">球員</th><th class="defaward-th-sub">守備率 FPCT</th>
+          <th class="defaward-th-sub defaward-sep">背號</th><th class="defaward-th-sub">球員</th><th class="defaward-th-sub">守備率 FPCT</th>
+          <th class="defaward-th-sub defaward-sep">背號</th><th class="defaward-th-sub">球員</th><th class="defaward-th-sub">守備率 FPCT</th>
+          <th class="defaward-th-sub defaward-sep">背號</th><th class="defaward-th-sub">球員</th><th class="defaward-th-sub">守備率 FPCT</th>
+          <th class="defaward-th-sub defaward-sep">背號</th><th class="defaward-th-sub">球員</th><th class="defaward-th-sub">守備率 FPCT</th>
+          <th class="defaward-th-sub defaward-sep">背號</th><th class="defaward-th-sub">球員</th><th class="defaward-th-sub">守備率 FPCT</th>
+          <th class="defaward-th-sub defaward-sep">背號</th><th class="defaward-th-sub">球員</th><th class="defaward-th-sub">守備率 FPCT</th>
+        </tr>
+      </thead>
+      <tbody id="defaward-tbody"></tbody>
+    </table>
+  </div>
+  <div class="defaward-footnote">
+    ⭐ <strong>守備王</strong>：不限守備位置，全隊守備率 FPCT 最高者（同值者以守備次數多者優先）。金手套各獎項僅計算該守備位置的紀錄。無對應位置資料時顯示「—」。
+  </div>
+</div>
+
+
+<!-- TAB: 手動調整 -->
+<div id="tab-adjust" class="tab-content">
+  <div class="adj-title-box">
+    <div class="at-icon">⚙️</div>
+    <div class="at-text">
+      <h2>手動調整 — 代跑得分記錄調整</h2>
+      <p>特定場次中，特定打席完成後改由代跑完成得分，手動將得分從原球員轉移至代跑球員</p>
+    </div>
+  </div>
+
+  <!-- 說明提示 -->
+  <div class="adjust-note-box">
+    ℹ️ <strong>使用說明：</strong>選擇場次後，系統會自動列出該場出賽球員。填入代跑生效局次、需轉移的得分與打點數，按「新增調整」後系統自動套用並更新所有統計頁籤。<br>
+    新增後可在下方記錄列表中確認，如需撤銷請點擊「🗑️」刪除。
+  </div>
+
+  <!-- 新增調整表單 -->
+  <div class="adj-form-card">
+    <h3>🔧 新增代跑調整記錄</h3>
+    <div class="adjust-grid">
+      <div class="adjust-field">
+        <label>📊 場次</label>
+        <select id="adj-game-sel">
+          <option value="">-- 選擇場次 --</option>
+        </select>
+      </div>
+      <div class="adjust-field">
+        <label>🚶 原打席球員（上壘者）</label>
+        <select id="adj-from-player">
+          <option value="">-- 選擇原打席球員（出賽者）--</option>
+        </select>
+      </div>
+      <div class="adjust-field">
+        <label>🏃 代跑球員</label>
+        <select id="adj-to-player">
+          <option value="">-- 選擇代跑球員 --</option>
+        </select>
+      </div>
+      <div class="adjust-field">
+        <label>⏱️ 代跑生效局次</label>
+        <input type="number" id="adj-inning" min="1" max="9" placeholder="例：3（第幾局起代跑）" style="padding:9px 12px;border:1.5px solid #d0c0b0;border-radius:8px;font-size:.88rem;width:100%;outline:none;">
+      </div>
+      <div class="adjust-field">
+        <label>🏅 轉移得分數（R）</label>
+        <input type="number" id="adj-runs" min="1" max="9" placeholder="例：1" style="padding:9px 12px;border:1.5px solid #d0c0b0;border-radius:8px;font-size:.88rem;width:100%;outline:none;">
+      </div>
+      <div class="adjust-field" style="grid-column:1/-1;">
+        <label>📝 備註（選填）</label>
+        <input type="text" id="adj-note" placeholder="例：第3局代跑回本壘得分" style="padding:9px 12px;border:1.5px solid #d0c0b0;border-radius:8px;font-size:.88rem;width:100%;outline:none;">
+      </div>
+    </div>
+    <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="adj-btn-add" onclick="addAdjustment()">+ 新增調整記錄</button>
+    </div>
+  </div>
+
+  <!-- 訊息提示 -->
+  <div id="adj-msg" style="display:none;margin:8px 0;"></div>
+
+  <!-- 調整記錄列表 -->
+  <div class="adj-form-card" style="margin-top:20px;">
+    <h3>📋 調整記錄列表</h3>
+    <!-- 統計摘要 -->
+    <div id="adj-summary"></div>
+    <!-- 記錄表格 -->
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:.83rem;min-width:620px;">
+        <thead>
+          <tr style="background:#2c3e50;color:#fff;">
+            <th style="padding:9px 12px;text-align:center;white-space:nowrap;">場次</th>
+            <th style="padding:9px 12px;text-align:center;white-space:nowrap;">生效局</th>
+            <th style="padding:9px 12px;text-align:center;white-space:nowrap;">原打席球員</th>
+            <th style="padding:9px 12px;text-align:center;">→</th>
+            <th style="padding:9px 12px;text-align:center;white-space:nowrap;">代跑球員</th>
+            <th style="padding:9px 12px;text-align:center;white-space:nowrap;">轉移得分</th>
+            <th style="padding:9px 12px;text-align:center;white-space:nowrap;">備註</th>
+            <th style="padding:9px 12px;text-align:center;">操作</th>
+          </tr>
+        </thead>
+        <tbody id="adj-list-tbody">
+          <tr><td colspan="8" style="color:#aaa;padding:18px;text-align:center;">尚無代跑調整記錄</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 影響彙整表 -->
+  <div class="adj-form-card" style="margin-top:20px;">
+    <h3>📊 得分影響彙整</h3>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:.83rem;min-width:480px;">
+        <thead>
+          <tr style="background:#005087;color:#fff;">
+            <th style="padding:9px 12px;text-align:center;">背號</th>
+            <th style="padding:9px 12px;text-align:center;">球員</th>
+            <th style="padding:9px 12px;text-align:center;">原始得分</th>
+            <th style="padding:9px 12px;text-align:center;">轉出（－）</th>
+            <th style="padding:9px 12px;text-align:center;">轉入（＋）</th>
+            <th style="padding:9px 12px;text-align:center;">淨變動</th>
+          </tr>
+        </thead>
+        <tbody id="adj-impact-tbody">
+          <tr><td colspan="6" style="color:#aaa;padding:16px;text-align:center;">無調整記錄</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- TAB 5: 資料上傳 -->
+<div id="tab-upload" class="tab-content">
+  <div class="upload-sec">
+    <h3>📋 使用步驟</h3>
+    <div class="guide-steps">
+      <div class="guide-step"><div class="step-num">1</div><div class="step-text"><strong>下載攻擊數據範本</strong>點擊下方按鈕下載 .xlsx 範本。</div></div>
+      <div class="guide-step"><div class="step-num">2</div><div class="step-text"><strong>填寫比賽數據</strong>依格式填入球員每場打擊數據，每位球員每場一列。</div></div>
+      <div class="guide-step"><div class="step-num">3</div><div class="step-text"><strong>上傳更新檔案</strong>拖曳或點擊選擇 Excel，系統自動解析並預覽。</div></div>
+      <div class="guide-step"><div class="step-num">4</div><div class="step-text"><strong>確認並套用</strong>確認無誤後點擊套用，圖表即時更新。</div></div>
+    </div>
+  </div>
+  <div class="upload-sec">
+    <h3>⚾ 上傳打擊數據（Excel）</h3>
+    <div id="drop-zone" class="drop-zone" onclick="document.getElementById('file-input').click()">
+      <div class="dz-icon">📂</div>
+      <p><strong>點擊選擇</strong>或將 Excel 檔案拖曳至此處</p>
+      <p class="dz-hint">支援格式：.xlsx / .xls / .csv</p>
+    </div>
+    <input type="file" id="file-input" accept=".xlsx,.xls,.csv" onchange="handleFileUpload(event)">
+    <div id="file-chosen" class="file-chosen"></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;">
+      <button class="btn-dl" onclick="downloadTemplate()">⬇️ 下載攻擊數據範本（.xlsx）</button>
+    </div>
+  </div>
+  <div class="upload-sec" id="preview-sec" style="display:none;">
+    <h3>🔍 打擊數據預覽</h3>
+    <div id="preview-area"></div>
+    <div style="margin-top:16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+      <button class="btn-apply" onclick="applyData()">✅ 套用數據並更新所有圖表</button>
+      <button class="btn-setdefault" onclick="updateDefaultData()">💾 更新預設打擊數據</button>
+      <button class="btn-reset" onclick="resetData()">🔄 還原預設打擊數據</button>
+    </div>
+    <div class="success-msg" id="apply-success">🎉 數據已成功套用！正在跳轉至全隊總覽…</div>
+    <div class="success-msg" id="setdefault-success" style="background:#fff3e0;border-color:#ffcc80;color:#e65100;">💾 預設數據已更新！</div>
+  </div>
+
+  <!-- 守備數據上傳區 -->
+  <div class="upload-sec" style="border-top:2px dashed #c8d8e8;margin-top:8px;padding-top:22px;">
+    <h3>🛡️ 上傳守備數據（Excel）</h3>
+    <p style="font-size:.84rem;color:#666;margin-bottom:14px;">新格式：橫式局次展開，每行代表一個打序，每局填入守備球員的<strong>守備內容、背號、姓名、守備區域</strong>，支援動態局次。舊格式（背號/姓名/TC/PO... 直式）亦可相容上傳。</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+      <button class="btn-dl" onclick="downloadDefTemplate()">⬇️ 下載守備數據範本（.xlsx）</button>
+    </div>
+    <div id="def-drop-zone" class="drop-zone" onclick="document.getElementById('def-file-input').click()">
+      <div class="dz-icon">🛡️</div>
+      <p><strong>點擊選擇</strong>或將守備 Excel 拖曳至此處</p>
+      <p class="dz-hint">支援格式：.xlsx / .xls / .csv，工作表名稱：守備數據</p>
+    </div>
+    <input type="file" id="def-file-input" accept=".xlsx,.xls,.csv" onchange="handleDefFileUpload(event)" style="display:none;">
+    <div id="def-file-chosen" class="file-chosen"></div>
+    <div id="def-preview-sec" style="display:none;margin-top:14px;">
+      <h3>🔍 守備數據預覽</h3>
+      <div id="def-preview-area"></div>
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn-apply" onclick="applyDefData()">✅ 套用數據並更新所有圖表</button>
+        <button class="btn-setdefault" onclick="saveDefDefault()">💾 更新預設守備數據</button>
+        <button class="btn-reset" onclick="clearDefData()">🔄 還原預設守備數據</button>
+      </div>
+      <div class="success-msg" id="def-apply-success">🎉 守備數據已成功套用！請切換至「守備統計」頁籤檢視。</div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /container -->
+<script>
+// ===== DATA =====
+const PLAYERS = [
+  {no:8,  name:'何天浩', games:[[0,0,0,0,0,0,0,0,0,0],[3,2,0,1,0,2,1,0,1,0],[0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0]]},
+  {no:9,  name:'蕭沛庭', games:[[2,2,1,0,1,3,1,0,0,1],[2,2,1,0,1,3,1,0,0,1],[2,1,1,1,0,2,0,0,1,0],[2,0,0,0,0,0,0,0,0,0]]},
+  {no:15, name:'陳冠安', games:[[2,1,1,1,1,2,0,0,1,0],[2,0,0,1,0,0,0,0,0,0],[1,0,1,0,0,0,0,0,0,0],[1,0,0,0,0,0,0,0,0,0]]},
+  {no:23, name:'鄭琮岳', games:[[0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0]]},
+  {no:26, name:'莊閔程', games:[[1,0,0,1,0,0,0,0,0,0],[1,0,0,1,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0],[1,0,0,0,0,0,0,0,0,0]]},
+  {no:28, name:'盧冠昇', games:[[0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0]]},
+  {no:34, name:'劉禹樂', games:[[2,1,1,0,2,2,0,0,0,1],[2,0,0,1,0,1,0,0,0,0],[0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0]]},
+  {no:35, name:'林賴奇', games:[[0,0,0,0,0,0,0,0,0,0],[1,1,0,0,1,1,1,0,0,0],[0,0,1,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0]]},
+  {no:39, name:'黃宇謙', games:[[2,1,0,0,0,0,0,1,0,0],[0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0]]},
+  {no:42, name:'林守柏', games:[[0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0],[1,1,1,0,0,0,1,0,0,0],[1,1,0,0,0,0,1,0,0,0]]},
+  {no:50, name:'陳昱瑄', games:[[0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0],[3,2,0,0,3,2,1,0,0,1],[1,0,0,0,0,0,0,0,0,0]]},
+  {no:64, name:'黃晨睿', games:[[2,0,1,0,0,2,0,0,0,0],[0,0,0,0,0,0,0,0,0,0],[1,1,2,0,2,2,0,0,0,1],[2,1,0,0,0,0,1,0,0,0]]},
+  {no:72, name:'張世昀', games:[[2,0,0,0,1,0,0,0,0,0],[2,0,0,2,0,0,0,0,0,0],[1,0,1,1,0,1,0,0,0,0],[0,0,1,0,0,0,0,0,0,0]]},
+  {no:73, name:'陳亦捷', games:[[0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0]]},
+  {no:74, name:'劉禹霆', games:[[0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0]]},
+  {no:77, name:'林承熙', games:[[1,0,0,1,0,0,0,0,0,0],[1,0,1,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0],[1,1,0,0,0,0,1,0,0,0]]},
+  {no:81, name:'陳柏呈', games:[[0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0],[2,0,0,1,0,0,0,0,0,0],[2,1,0,0,0,0,1,0,0,0]]},
+  {no:82, name:'鄞圻睿', games:[[2,1,1,0,0,2,1,0,0,0],[3,2,0,0,2,0,2,0,0,0],[0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0]]},
+  {no:83, name:'陳俊希', games:[[0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0],[1,0,0,1,0,0,0,0,0,0],[1,0,0,0,0,0,0,0,0,0]]},
+  {no:98, name:'朱彥宇', games:[[3,2,0,0,1,2,1,1,0,0],[3,2,0,0,2,3,1,1,0,0],[3,1,0,0,3,3,0,0,0,1],[2,0,0,0,0,0,0,0,0,0]]},
+  {no:99, name:'張郁晨', games:[[2,0,0,0,0,0,0,0,0,0],[1,0,0,1,0,1,0,0,0,0],[0,0,1,0,0,1,0,0,0,0],[1,0,0,1,0,0,0,0,0,0]]}
+];
+const TEAM_GAMES = [
+  {label:'#1',ab:21,h:8,bb:5,k:3,rbi:6,r:13,b1:3,b2:2,b3:1,hr:2,avg:0.381,obp:0.500,slg:0.857},
+  {label:'#2',ab:21,h:9,bb:2,k:7,rbi:6,r:11,b1:6,b2:1,b3:1,hr:1,avg:0.429,obp:0.478,slg:0.714},
+  {label:'#3',ab:15,h:6,bb:8,k:4,rbi:8,r:11,b1:2,b2:0,b3:1,hr:3,avg:0.400,obp:0.609,slg:1.133},
+  {label:'#4',ab:15,h:4,bb:1,k:1,rbi:0,r:0, b1:4,b2:0,b3:0,hr:0,avg:0.267,obp:0.313,slg:0.267}
+];
+const HIT_COLORS=['#5B9BD5','#70AD47','#FFC000','#FF4500'];
+const HIT_LABELS=['一壘打','二壘打','三壘打','全壘打'];
+
+function cumStats(games){
+  return {ab:games.reduce((s,g)=>s+g[0],0),h:games.reduce((s,g)=>s+g[1],0),
+    bb:games.reduce((s,g)=>s+g[2],0),k:games.reduce((s,g)=>s+g[3],0),
+    rbi:games.reduce((s,g)=>s+g[4],0),r:games.reduce((s,g)=>s+g[5],0),
+    b1:games.reduce((s,g)=>s+g[6],0),b2:games.reduce((s,g)=>s+g[7],0),
+    b3:games.reduce((s,g)=>s+g[8],0),hr:games.reduce((s,g)=>s+g[9],0)};
+}
+function avg(h,ab){return ab>0?h/ab:null;}
+function fmtAvg(v){return v===null?'---':v.toFixed(3);}
+
+// ===== 從 BATTING_DATA 動態計算（所有頁籤共用）=====
+const IS_HIT=c=>['1B','1B_內','2B','3B','HR','HR_內'].includes(c);
+// SF/SAC 犧牲打不計打數；PR 代跑不計打數；其餘（含 GO/FO/K/E_內/E_外/FC/DP 等）都計打數
+const IS_AB =c=>c!==''&&c!=='BB'&&c!=='HP'&&c!=='SF'&&c!=='SAC'&&c!=='PR'&&c!=='犧牲飛球'&&c!=='犧牲觸擊'&&c!=='犧牲';
+
+// 計算單一球員累積數據（從 BATTING_DATA）
+function calcPlayerStats(no){
+  const rows=BATTING_DATA.filter(d=>d.no===no);
+  let ab=0,h=0,bb=0,hp=0,k=0,rbi=0,r=0,b1=0,b2=0,b3=0,hr=0;
+  rows.forEach(d=>{
+    const c=d.content||'';
+    if(IS_AB(c))  ab++;
+    if(IS_HIT(c)) h++;
+    if(c==='BB')  bb++;
+    if(c==='HP')  hp++;
+    if(c==='K')   k++;
+    rbi+=d.rbi||0; r+=d.r||0;
+    if(c==='1B'||c==='1B_內') b1++;
+    if(c==='2B') b2++;
+    if(c==='3B') b3++;
+    if(c==='HR'||c==='HR_內') hr++;
+  });
+  const avg_v=ab>0?h/ab:null;
+  const obp=(ab+bb+hp)>0?(h+bb+hp)/(ab+bb+hp):null;
+  const tb=b1+b2*2+b3*3+hr*4;
+  const slg=ab>0?tb/ab:null;
+  const ops=(obp!==null&&slg!==null)?obp+slg:null;
+  return {ab,h,bb,hp,k,rbi,r,b1,b2,b3,hr,avg:avg_v,obp,slg,ops};
+}
+
+// 計算單一球員各場次數據
+function calcPlayerGameStats(no){
+  const games=TEAM_GAMES.map((_,gi)=>{
+    const rows=BATTING_DATA.filter(d=>d.no===no&&d.game===(gi+1));
+    let ab=0,h=0,bb=0,hp=0,k=0,rbi=0,r=0,b1=0,b2=0,b3=0,hr=0;
+    rows.forEach(d=>{
+      const c=d.content||'';
+      if(IS_AB(c))  ab++;
+      if(IS_HIT(c)) h++;
+      if(c==='BB')  bb++;
+      if(c==='HP')  hp++;
+      if(c==='K')   k++;
+      rbi+=d.rbi||0; r+=d.r||0;
+      if(c==='1B'||c==='1B_內') b1++;
+      if(c==='2B') b2++;
+      if(c==='3B') b3++;
+      if(c==='HR'||c==='HR_內') hr++;
+    });
+    return {ab,h,bb,hp,k,rbi,r,b1,b2,b3,hr};
+  });
+  return games;
+}
+
+// 計算全隊各場次數據（從 BATTING_DATA）
+function calcTeamGameStats(){
+  return TEAM_GAMES.map((_,gi)=>{
+    const rows=BATTING_DATA.filter(d=>d.game===(gi+1));
+    let ab=0,h=0,bb=0,hp=0,k=0,rbi=0,r=0,b1=0,b2=0,b3=0,hr=0;
+    rows.forEach(d=>{
+      const c=d.content||'';
+      if(IS_AB(c))  ab++;
+      if(IS_HIT(c)) h++;
+      if(c==='BB')  bb++;
+      if(c==='HP')  hp++;
+      if(c==='K')   k++;
+      rbi+=d.rbi||0; r+=d.r||0;
+      if(c==='1B'||c==='1B_內') b1++;
+      if(c==='2B') b2++;
+      if(c==='3B') b3++;
+      if(c==='HR'||c==='HR_內') hr++;
+    });
+    const avg_v=ab>0?h/ab:null;
+    const obp=(ab+bb+hp)>0?(h+bb+hp)/(ab+bb+hp):null;
+    const tb=b1+b2*2+b3*3+hr*4;
+    const slg=ab>0?tb/ab:null;
+    const ops=(obp!==null&&slg!==null)?obp+slg:null;
+    return {label:TEAM_GAMES[gi].label,ab,h,bb,hp,k,rbi,r,b1,b2,b3,hr,avg:avg_v,obp,slg,ops};
+  });
+}
+
+const charts={};
+function getChart(id){
+  const el=document.getElementById(id);
+  if(!el)return null;
+  if(!charts[id])charts[id]=echarts.init(el);
+  return charts[id];
+}
+window.addEventListener('resize',()=>Object.values(charts).forEach(c=>c&&c.resize()));
+
+// ===== TAB 1 =====
+function renderTeam(){
+  // 全部從 BATTING_DATA 動態計算，與打擊記錄完全同步
+  const gs=calcTeamGameStats(); // 各場數據
+  const cumAB=gs.reduce((s,g)=>s+g.ab,0);
+  const cumH =gs.reduce((s,g)=>s+g.h,0);
+  const cumBB=gs.reduce((s,g)=>s+g.bb,0);
+  const cumHP=gs.reduce((s,g)=>s+g.hp,0);
+  const cumB1=gs.reduce((s,g)=>s+g.b1,0);
+  const cumB2=gs.reduce((s,g)=>s+g.b2,0);
+  const cumB3=gs.reduce((s,g)=>s+g.b3,0);
+  const cumHR=gs.reduce((s,g)=>s+g.hr,0);
+  const cumR =gs.reduce((s,g)=>s+g.r,0);
+  const cumRBI=gs.reduce((s,g)=>s+g.rbi,0);
+  const cumK  =gs.reduce((s,g)=>s+g.k,0);
+  const cumAVG=cumAB>0?+(cumH/cumAB).toFixed(3):0;
+  const cumOBP=+(cumAB+cumBB+cumHP>0?(cumH+cumBB+cumHP)/(cumAB+cumBB+cumHP):0).toFixed(3);
+  const cumTB =cumB1+cumB2*2+cumB3*3+cumHR*4;
+  const cumSLG=cumAB>0?+(cumTB/cumAB).toFixed(3):0;
+  const cumOPS=+(cumOBP+cumSLG).toFixed(3);
+  const numG=TEAM_GAMES.length;
+  const xLabels=[...gs.map(g=>g.label),'累積'];
+  document.getElementById('header-subtitle').textContent=`打擊統計分析系統｜共 ${numG} 場賽事`;
+  document.getElementById('header-badge').textContent=`${PLAYERS.length} 位球員 · 即時統計`;
+  document.getElementById('team-cards').innerHTML=[
+    `<div class="card blue"><div class="label">全隊累積安打</div><div class="value">${cumH}</div><div class="sub">打數 ${cumAB} 次</div></div>`,
+    `<div class="card green"><div class="label">全隊打擊率</div><div class="value">${cumAVG.toFixed(3)}</div><div class="sub">得分 ${cumR} 分</div></div>`,
+    `<div class="card orange"><div class="label">累積打點</div><div class="value">${cumRBI}</div><div class="sub">保送 ${cumBB} 次</div></div>`,
+    `<div class="card red"><div class="label">累積全壘打</div><div class="value">${cumHR}</div><div class="sub">三振 ${cumK} 次</div></div>`
+  ].join('');
+  const c1=getChart('chart-team-avg');
+  c1.setOption({
+    tooltip:{trigger:'axis',axisPointer:{type:'cross'}},
+    legend:{top:5,data:['打擊率 AVG','上壘率 OBP','長打率 SLG','整體攻擊指數 OPS'],textStyle:{fontSize:12},
+      formatter:function(name){
+        var map={'打擊率 AVG':cumAVG,'上壘率 OBP':cumOBP,'長打率 SLG':cumSLG,'整體攻擊指數 OPS':cumOPS};
+        return name in map?name+' ('+Number(map[name]).toFixed(3)+')':name;
+      }},
+    xAxis:{type:'category',data:xLabels,axisLabel:{fontSize:13}},
+    yAxis:[
+      {type:'value',name:'AVG / OBP / SLG',min:0,max:1.3,axisLabel:{formatter:v=>v.toFixed(3)},nameTextStyle:{fontSize:11}},
+      {type:'value',name:'OPS',min:0,max:2.2,axisLabel:{formatter:v=>v.toFixed(3)},nameTextStyle:{fontSize:11},splitLine:{show:false}}
+    ],
+    series:[
+      {name:'打擊率 AVG',type:'line',yAxisIndex:0,
+       data:[...gs.map(g=>g.avg!==null?+g.avg.toFixed(3):null),null],
+       connectNulls:false,symbol:'circle',symbolSize:9,lineStyle:{width:3},itemStyle:{color:'#e67e22'},
+       label:{show:true,formatter:p=>p.value!==null?Number(p.value).toFixed(3):'',fontSize:12,position:'top'}},
+      {name:'上壘率 OBP',type:'line',yAxisIndex:0,
+       data:[...gs.map(g=>g.obp!==null?+g.obp.toFixed(3):null),null],
+       connectNulls:false,symbol:'circle',symbolSize:9,lineStyle:{width:3,type:'dashed'},itemStyle:{color:'#005087'},
+       label:{show:true,formatter:p=>p.value!==null?Number(p.value).toFixed(3):'',fontSize:12,position:'top'}},
+      {name:'長打率 SLG',type:'line',yAxisIndex:0,
+       data:[...gs.map(g=>g.slg!==null?+g.slg.toFixed(3):null),null],
+       connectNulls:false,symbol:'diamond',symbolSize:11,lineStyle:{width:3,type:'dotted'},itemStyle:{color:'#27ae60'},
+       label:{show:true,formatter:p=>p.value!==null?Number(p.value).toFixed(3):'',fontSize:12,position:'bottom'}},
+      {name:'整體攻擊指數 OPS',type:'line',yAxisIndex:1,
+       data:[...gs.map(g=>g.ops!==null?+g.ops.toFixed(3):null),null],
+       connectNulls:false,symbol:'triangle',symbolSize:12,lineStyle:{width:3},itemStyle:{color:'#8e44ad'},
+       label:{show:true,formatter:p=>p.value!==null?Number(p.value).toFixed(3):'',fontSize:12,position:'top'}},
+      {name:'累積 AVG',type:'scatter',yAxisIndex:0,data:[[numG,cumAVG]],symbol:'diamond',symbolSize:18,
+       itemStyle:{color:'#e67e22',borderColor:'#fff',borderWidth:2},
+       label:{show:true,formatter:p=>p.value[1].toFixed(3),position:'top',fontSize:12,color:'#e67e22',fontWeight:'bold'}},
+      {name:'累積 OBP',type:'scatter',yAxisIndex:0,data:[[numG,cumOBP]],symbol:'diamond',symbolSize:18,
+       itemStyle:{color:'#005087',borderColor:'#fff',borderWidth:2},
+       label:{show:true,formatter:p=>p.value[1].toFixed(3),position:'top',fontSize:12,color:'#005087',fontWeight:'bold'}},
+      {name:'累積 SLG',type:'scatter',yAxisIndex:0,data:[[numG,cumSLG]],symbol:'diamond',symbolSize:18,
+       itemStyle:{color:'#27ae60',borderColor:'#fff',borderWidth:2},
+       label:{show:true,formatter:p=>p.value[1].toFixed(3),position:'bottom',fontSize:12,color:'#27ae60',fontWeight:'bold'}},
+      {name:'累積 OPS',type:'scatter',yAxisIndex:1,data:[[numG,cumOPS]],symbol:'diamond',symbolSize:20,
+       itemStyle:{color:'#8e44ad',borderColor:'#fff',borderWidth:2},
+       label:{show:true,formatter:p=>p.value[1].toFixed(3),position:'top',fontSize:12,color:'#8e44ad',fontWeight:'bold'}}
+    ]});
+  const c2=getChart('chart-team-hits');
+  c2.setOption({tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},legend:{top:5},
+    xAxis:{type:'category',data:xLabels},yAxis:{type:'value',name:'安打數'},
+    series:[
+      {name:'一壘打',type:'bar',stack:'hits',data:[...gs.map(g=>g.b1),cumB1],itemStyle:{color:HIT_COLORS[0]},label:{show:true,formatter:p=>p.value>0?p.value:''}},
+      {name:'二壘打',type:'bar',stack:'hits',data:[...gs.map(g=>g.b2),cumB2],itemStyle:{color:HIT_COLORS[1]},label:{show:true,formatter:p=>p.value>0?p.value:''}},
+      {name:'三壘打',type:'bar',stack:'hits',data:[...gs.map(g=>g.b3),cumB3],itemStyle:{color:HIT_COLORS[2]},label:{show:true,formatter:p=>p.value>0?p.value:''}},
+      {name:'全壘打',type:'bar',stack:'hits',data:[...gs.map(g=>g.hr),cumHR],itemStyle:{color:HIT_COLORS[3]},label:{show:true,formatter:p=>p.value>0?p.value:''}}
+    ]});
+  const c3=getChart('chart-team-rbi');
+  c3.setOption({tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},legend:{top:5},
+    xAxis:{type:'category',data:xLabels},yAxis:{type:'value',name:'次數'},
+    series:[
+      {name:'得分 R',type:'bar',data:[...gs.map(g=>g.r),cumR],
+       itemStyle:{color:'#005087'},label:{show:true,position:'top',fontSize:12}},
+      {name:'打點 RBI',type:'bar',data:[...gs.map(g=>g.rbi),cumRBI],
+       itemStyle:{color:'#e67e22'},label:{show:true,position:'top',fontSize:12}}
+    ]});
+}
+
+// ===== TAB 2 =====
+function buildPlayerSelect(){
+  const sel=document.getElementById('player-select');
+  const optAll=document.createElement('option');
+  optAll.value=-1; optAll.textContent='⚾ 全隊累積';
+  sel.appendChild(optAll);
+  PLAYERS.forEach(p=>{
+    // 下拉選單統計也改從 BATTING_DATA 計算
+    const c=calcPlayerStats(p.no);
+    const opt=document.createElement('option');
+    opt.value=p.no;
+    opt.textContent=`#${p.no} ${p.name}  (${c.ab}AB / ${c.h}H / ${fmtAvg(c.avg)})`;
+    sel.appendChild(opt);
+  });
+}
+function renderPlayerChart(){
+  const selVal=document.getElementById('player-select').value;
+  if(parseInt(selVal)===-1){renderTeamCumulative();return;}
+  const no=parseInt(selVal);
+  const p=PLAYERS.find(x=>x.no===no);
+  if(!p)return;
+  // 全部從 BATTING_DATA 計算，與打擊記錄完全同步
+  const c=calcPlayerStats(no);
+  const gs=calcPlayerGameStats(no); // 各場數據
+  const numGames=TEAM_GAMES.length;
+  const xData=[...TEAM_GAMES.map(g=>g.label),'累積'];
+  document.getElementById('player-stat-cards').innerHTML=[
+    `<div class="stat-card"><div class="s-label">打數</div><div class="s-val">${c.ab}</div></div>`,
+    `<div class="stat-card"><div class="s-label">安打</div><div class="s-val">${c.h}</div></div>`,
+    `<div class="stat-card"><div class="s-label">打擊率</div><div class="s-val" style="color:#e67e22">${fmtAvg(c.avg)}</div></div>`,
+    `<div class="stat-card"><div class="s-label">得分</div><div class="s-val">${c.r}</div></div>`,
+    `<div class="stat-card"><div class="s-label">打點</div><div class="s-val">${c.rbi}</div></div>`,
+    `<div class="stat-card"><div class="s-label">保送</div><div class="s-val">${c.bb}</div></div>`,
+    `<div class="stat-card"><div class="s-label">三振</div><div class="s-val">${c.k}</div></div>`,
+    `<div class="stat-card"><div class="s-label">全壘打</div><div class="s-val" style="color:#e74c3c">${c.hr}</div></div>`
+  ].join('');
+  document.getElementById('player-chart-title').textContent=`#${p.no} ${p.name} — 各場次打擊趨勢 + 累積`;
+  const abData=[...gs.slice(0,numGames).map(g=>g.ab),c.ab];
+  const b1Data=[...gs.slice(0,numGames).map(g=>g.b1),c.b1];
+  const b2Data=[...gs.slice(0,numGames).map(g=>g.b2),c.b2];
+  const b3Data=[...gs.slice(0,numGames).map(g=>g.b3),c.b3];
+  const hrData=[...gs.slice(0,numGames).map(g=>g.hr),c.hr];
+  const avgData=gs.slice(0,numGames).map(g=>avg(g.h,g.ab));
+  const cumAvg=c.avg;
+  const ch=getChart('chart-player');
+  ch.setOption({
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+    legend:{top:5,data:['打數','一壘打','二壘打','三壘打','全壘打','打擊率(場)','累積打擊率']},
+    xAxis:{type:'category',data:xData,axisLabel:{fontSize:13}},
+    yAxis:[{type:'value',name:'次數',position:'left',minInterval:1},
+           {type:'value',name:'打擊率',position:'right',min:0,max:1.05,axisLabel:{formatter:v=>v.toFixed(3)}}],
+    series:[
+      {name:'打數',type:'bar',data:abData,itemStyle:{color:'#bdc3c7'},z:1,
+       label:{show:true,position:'top',fontSize:11,color:'#555',formatter:p=>p.value>0?p.value:''}},
+      {name:'一壘打',type:'bar',data:b1Data,stack:'hits',itemStyle:{color:HIT_COLORS[0]},z:2,
+       label:{show:true,formatter:p=>p.value>0?p.value:''}},
+      {name:'二壘打',type:'bar',data:b2Data,stack:'hits',itemStyle:{color:HIT_COLORS[1]},z:2,
+       label:{show:true,formatter:p=>p.value>0?p.value:''}},
+      {name:'三壘打',type:'bar',data:b3Data,stack:'hits',itemStyle:{color:HIT_COLORS[2]},z:2,
+       label:{show:true,formatter:p=>p.value>0?p.value:''}},
+      {name:'全壘打',type:'bar',data:hrData,stack:'hits',itemStyle:{color:HIT_COLORS[3]},z:2,
+       label:{show:true,formatter:p=>p.value>0?p.value:''}},
+      {name:'打擊率(場)',type:'line',yAxisIndex:1,
+       data:[...avgData.map(v=>v!==null?+v.toFixed(3):null),null],
+       symbol:'circle',symbolSize:9,lineStyle:{color:'#e67e22',width:2.5},itemStyle:{color:'#e67e22'},
+       connectNulls:false,label:{show:true,fontSize:11,color:'#e67e22',
+       formatter:p=>p.value!==null&&p.value!==undefined?Number(p.value).toFixed(3):''}},
+      {name:'累積打擊率',type:'scatter',yAxisIndex:1,
+       data:cumAvg!==null?[[numGames,+cumAvg.toFixed(3)]]:[],
+       symbol:'diamond',symbolSize:16,itemStyle:{color:'#c0392b'},
+       label:{show:true,position:'top',formatter:p=>Number(p.value[1]).toFixed(3),fontSize:12,color:'#c0392b',fontWeight:'bold'}}
+    ]
+  });
+  // ===== 個人守備圖表（呈現方式比照全隊累積）=====
+  const defSection=document.getElementById('player-def-section');
+  const playerDefData=DEFENSE_DATA.filter(d=>d.no===no);
+  if(defSection) defSection.style.display='';
+  {
+    const gameKeys=Object.keys(GAME_LABELS).map(Number).sort((a,b)=>a-b);
+    const defXLabels=[...gameKeys.map(g=>GAME_LABELS[g]),'累積'];
+    const pDefTotalArr=gameKeys.map(g=>playerDefData.filter(d=>d.game===g).length);
+    const pDefErrArr  =gameKeys.map(g=>playerDefData.filter(d=>d.game===g&&d.isError).length);
+    const pDefOutArr  =pDefTotalArr.map((t,i)=>t-pDefErrArr[i]);
+    const pCumDef=playerDefData.length;
+    const pCumErr=playerDefData.filter(d=>d.isError).length;
+    const pCumOut=pCumDef-pCumErr;
+    const pDefRateArr=pDefTotalArr.map((tot,i)=>tot>0?+((pDefOutArr[i]/tot).toFixed(3)):null);
+    const pCumRate=pCumDef>0?+(pCumOut/pCumDef).toFixed(3):null;
+    const numPDefGames=gameKeys.length;
+    const cd1=getChart('chart-player-def1');
+    cd1.setOption({
+      tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+      legend:{top:5,data:['正常守備','守備失誤','守備率(場)','累積守備率']},
+      xAxis:{type:'category',data:defXLabels,axisLabel:{fontSize:12}},
+      yAxis:[
+        {type:'value',name:'次數',position:'left',minInterval:1},
+        {type:'value',name:'守備率',position:'right',min:0,max:1.05,
+         axisLabel:{formatter:v=>v.toFixed(3)},splitLine:{show:false}}
+      ],
+      series:[
+        {name:'正常守備',type:'bar',yAxisIndex:0,stack:'def',data:[...pDefOutArr,pCumOut],
+         itemStyle:{color:'#27ae60'},label:{show:true,formatter:p=>p.value>0?p.value:''}},
+        {name:'守備失誤',type:'bar',yAxisIndex:0,stack:'def',data:[...pDefErrArr,pCumErr],
+         itemStyle:{color:'#c0392b'},label:{show:true,formatter:p=>p.value>0?p.value:''}},
+        {name:'守備率(場)',type:'line',yAxisIndex:1,
+         data:[...pDefRateArr,null],
+         symbol:'circle',symbolSize:9,lineStyle:{color:'#005087',width:2.5},itemStyle:{color:'#005087'},
+         connectNulls:false,
+         label:{show:true,fontSize:11,color:'#005087',
+                formatter:p=>p.value!==null&&p.value!==undefined?Number(p.value).toFixed(3):''}},
+        {name:'累積守備率',type:'scatter',yAxisIndex:1,
+         data:pCumRate!==null?[[numPDefGames,pCumRate]]:[],
+         symbol:'diamond',symbolSize:18,itemStyle:{color:'#8e44ad'},
+         label:{show:true,position:'top',formatter:p=>Number(p.value[1]).toFixed(3),
+                fontSize:13,color:'#8e44ad',fontWeight:'bold'}}
+      ]
+    });
+    document.getElementById('player-def-title1').textContent=`🛡️ #${p.no} ${p.name} — 各場次守備數據總覽`;
+  }
+}
+
+function renderTeamCumulative(){
+  // 改從 BATTING_DATA 動態計算，與打擊記錄完全同步
+  const gs=calcTeamGameStats();
+  const totAB=gs.reduce((s,g)=>s+g.ab,0);
+  const totH =gs.reduce((s,g)=>s+g.h,0);
+  const totR =gs.reduce((s,g)=>s+g.r,0);
+  const totRBI=gs.reduce((s,g)=>s+g.rbi,0);
+  const totBB=gs.reduce((s,g)=>s+g.bb,0);
+  const totHP=gs.reduce((s,g)=>s+g.hp,0);
+  const totK =gs.reduce((s,g)=>s+g.k,0);
+  const totHR=gs.reduce((s,g)=>s+g.hr,0);
+  const totB1=gs.reduce((s,g)=>s+g.b1,0);
+  const totB2=gs.reduce((s,g)=>s+g.b2,0);
+  const totB3=gs.reduce((s,g)=>s+g.b3,0);
+  const teamAVG=totAB>0?totH/totAB:null;
+  const teamOBP=(totAB+totBB+totHP)>0?(totH+totBB+totHP)/(totAB+totBB+totHP):null;
+  const teamTB=totB1+totB2*2+totB3*3+totHR*4;
+  const teamSLG=totAB>0?teamTB/totAB:null;
+  const teamOPS=teamOBP!==null&&teamSLG!==null?teamOBP+teamSLG:null;
+  document.getElementById('player-stat-cards').innerHTML=[
+    `<div class="stat-card"><div class="s-label">全隊打數</div><div class="s-val">${totAB}</div></div>`,
+    `<div class="stat-card"><div class="s-label">全隊安打</div><div class="s-val">${totH}</div></div>`,
+    `<div class="stat-card"><div class="s-label">打擊率 AVG</div><div class="s-val" style="color:#e67e22">${fmtAvg(teamAVG)}</div></div>`,
+    `<div class="stat-card"><div class="s-label">上壘率 OBP</div><div class="s-val" style="color:#005087">${teamOBP!==null?teamOBP.toFixed(3):'---'}</div></div>`,
+    `<div class="stat-card"><div class="s-label">長打率 SLG</div><div class="s-val" style="color:#27ae60">${teamSLG!==null?teamSLG.toFixed(3):'---'}</div></div>`,
+    `<div class="stat-card"><div class="s-label">OPS</div><div class="s-val" style="color:#8e44ad">${teamOPS!==null?teamOPS.toFixed(3):'---'}</div></div>`,
+    `<div class="stat-card"><div class="s-label">全隊得分</div><div class="s-val">${totR}</div></div>`,
+    `<div class="stat-card"><div class="s-label">全隊打點</div><div class="s-val">${totRBI}</div></div>`,
+    `<div class="stat-card"><div class="s-label">全隊保送</div><div class="s-val">${totBB}</div></div>`,
+    `<div class="stat-card"><div class="s-label">全隊三振</div><div class="s-val">${totK}</div></div>`,
+    `<div class="stat-card"><div class="s-label">全隊全壘打</div><div class="s-val" style="color:#e74c3c">${totHR}</div></div>`,
+    `<div class="stat-card"><div class="s-label">參賽場次</div><div class="s-val">${TEAM_GAMES.length}</div></div>`
+  ].join('');
+  document.getElementById('player-chart-title').textContent='⚾ 全隊累積 — 各場次打擊數據總覽';
+  const numGames=TEAM_GAMES.length;
+  const xData=[...gs.map(g=>g.label),'累積'];
+  const abArr=[...gs.map(g=>g.ab),totAB];
+  const b1Arr=[...gs.map(g=>g.b1),totB1];
+  const b2Arr=[...gs.map(g=>g.b2),totB2];
+  const b3Arr=[...gs.map(g=>g.b3),totB3];
+  const hrArr=[...gs.map(g=>g.hr),totHR];
+  const avgArr=gs.map(g=>g.avg!==null?+g.avg.toFixed(3):null);
+  const ch=getChart('chart-player');
+  ch.setOption({
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+    legend:{top:5,data:['全隊打數','一壘打','二壘打','三壘打','全壘打','全隊打擊率(場)','全隊累積打擊率']},
+    xAxis:{type:'category',data:xData,axisLabel:{fontSize:13}},
+    yAxis:[{type:'value',name:'次數',position:'left',minInterval:1},
+           {type:'value',name:'打擊率',position:'right',min:0,max:1.05,axisLabel:{formatter:v=>v.toFixed(3)}}],
+    series:[
+      {name:'全隊打數',type:'bar',data:abArr,itemStyle:{color:'#bdc3c7'},z:1,
+       label:{show:true,position:'top',fontSize:11,color:'#555',formatter:p=>p.value>0?p.value:''}},
+      {name:'一壘打',type:'bar',data:b1Arr,stack:'hits',itemStyle:{color:HIT_COLORS[0]},z:2,label:{show:true,formatter:p=>p.value>0?p.value:''}},
+      {name:'二壘打',type:'bar',data:b2Arr,stack:'hits',itemStyle:{color:HIT_COLORS[1]},z:2,label:{show:true,formatter:p=>p.value>0?p.value:''}},
+      {name:'三壘打',type:'bar',data:b3Arr,stack:'hits',itemStyle:{color:HIT_COLORS[2]},z:2,label:{show:true,formatter:p=>p.value>0?p.value:''}},
+      {name:'全壘打',type:'bar',data:hrArr,stack:'hits',itemStyle:{color:HIT_COLORS[3]},z:2,label:{show:true,formatter:p=>p.value>0?p.value:''}},
+      {name:'全隊打擊率(場)',type:'line',yAxisIndex:1,data:[...avgArr,null],
+       symbol:'circle',symbolSize:9,lineStyle:{color:'#e67e22',width:2.5},itemStyle:{color:'#e67e22'},
+       connectNulls:false,label:{show:true,fontSize:11,color:'#e67e22',formatter:p=>p.value!==null&&p.value!==undefined?Number(p.value).toFixed(3):''}},
+      {name:'全隊累積打擊率',type:'scatter',yAxisIndex:1,
+       data:teamAVG!==null?[[numGames,+teamAVG.toFixed(3)]]:[],
+       symbol:'diamond',symbolSize:18,itemStyle:{color:'#c0392b'},
+       label:{show:true,position:'top',formatter:p=>Number(p.value[1]).toFixed(3),fontSize:13,color:'#c0392b',fontWeight:'bold'}}
+    ]
+  });
+  renderTeamDefChart('🛡️ 全隊累積 — 各場次守備數據總覽');
+}
+
+function renderTeamDefChart(title){
+  // 顯示守備圖表區塊
+  const defSection=document.getElementById('player-def-section');
+  if(defSection) defSection.style.display='';
+  // 計算各場次守備數量
+  const gameKeys=Object.keys(GAME_LABELS).map(Number).sort((a,b)=>a-b);
+  const defXLabels=[...gameKeys.map(g=>GAME_LABELS[g]),'累積'];
+  const defErrArr=gameKeys.map(g=>DEFENSE_DATA.filter(d=>d.game===g&&d.isError).length);
+  const defOutArr=gameKeys.map(g=>DEFENSE_DATA.filter(d=>d.game===g&&!d.isError).length);
+  const defTotalArr=gameKeys.map((g,i)=>defOutArr[i]+defErrArr[i]);
+  const cumDef=DEFENSE_DATA.length;
+  const cumDefErr=DEFENSE_DATA.filter(d=>d.isError).length;
+  const cumDefOut=cumDef-cumDefErr;
+  // 各場守備率（0~1，無守備機會為 null）
+  const defRateArr=defTotalArr.map((tot,i)=>tot>0?+((defOutArr[i]/tot).toFixed(3)):null);
+  const cumDefRate=cumDef>0?+(cumDefOut/cumDef).toFixed(3):null;
+  const numDefGames=gameKeys.length;
+  // 守備圖：正常守備 + 失誤（堆疊 bar，左軸）+ 守備率 line（右軸）+ 累積守備率 scatter
+  const cd1=getChart('chart-player-def1');
+  cd1.setOption({
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+    legend:{top:5,data:['正常守備','守備失誤','守備率(場)','累積守備率']},
+    xAxis:{type:'category',data:defXLabels,axisLabel:{fontSize:12}},
+    yAxis:[
+      {type:'value',name:'次數',position:'left',minInterval:1},
+      {type:'value',name:'守備率',position:'right',min:0,max:1.05,
+       axisLabel:{formatter:v=>v.toFixed(3)},splitLine:{show:false}}
+    ],
+    series:[
+      {name:'正常守備',type:'bar',yAxisIndex:0,stack:'def',data:[...defOutArr,cumDefOut],
+       itemStyle:{color:'#27ae60'},label:{show:true,formatter:p=>p.value>0?p.value:''}},
+      {name:'守備失誤',type:'bar',yAxisIndex:0,stack:'def',data:[...defErrArr,cumDefErr],
+       itemStyle:{color:'#c0392b'},label:{show:true,formatter:p=>p.value>0?p.value:''}},
+      {name:'守備率(場)',type:'line',yAxisIndex:1,
+       data:[...defRateArr,null],
+       symbol:'circle',symbolSize:9,lineStyle:{color:'#005087',width:2.5},itemStyle:{color:'#005087'},
+       connectNulls:false,
+       label:{show:true,fontSize:11,color:'#005087',
+              formatter:p=>p.value!==null&&p.value!==undefined?Number(p.value).toFixed(3):''}},
+      {name:'累積守備率',type:'scatter',yAxisIndex:1,
+       data:cumDefRate!==null?[[numDefGames,cumDefRate]]:[],
+       symbol:'diamond',symbolSize:18,itemStyle:{color:'#8e44ad'},
+       label:{show:true,position:'top',formatter:p=>Number(p.value[1]).toFixed(3),
+              fontSize:13,color:'#8e44ad',fontWeight:'bold'}}
+    ]
+  });
+  document.getElementById('player-def-title1').textContent=title;
+}
+
+// ===== TAB 3 =====
+let sortKey='ab',sortDir=-1;
+const COLS=[
+  {key:'no',label:'背號'},{key:'name',label:'球員'},
+  {key:'ab',label:'打數'},{key:'h',label:'安打'},
+  {key:'avg',label:'打擊率'},{key:'obp',label:'上壘率'},
+  {key:'rbi',label:'打點'},{key:'r',label:'得分'},
+  {key:'b1',label:'1B'},{key:'b2',label:'2B'},
+  {key:'b3',label:'3B'},{key:'hr',label:'HR'},
+  {key:'bb',label:'保送'},{key:'hp',label:'觸身(HP)'},
+  {key:'k',label:'三振'}
+];
+function buildTableData(){
+  // 資料來源改為從 BATTING_DATA 動態計算，與「打擊記錄統計彙整」完全一致
+  // 使用全域 IS_HIT / IS_AB 確保邏輯完全一致（SF/SAC/空字串均不計打數）
+  // 以 PLAYERS 為基準（保留完整球員名單含出賽0次者），再疊加 BATTING_DATA
+  return PLAYERS.map(p=>{
+    const rows=BATTING_DATA.filter(d=>d.no===p.no);
+    let ab=0,h=0,bb=0,hp=0,k=0,rbi=0,r=0,b1=0,b2=0,b3=0,hr=0;
+    rows.forEach(d=>{
+      const c=d.content||'';
+      if(IS_AB(c))  ab++;
+      if(IS_HIT(c)) h++;
+      if(c==='BB') bb++;
+      if(c==='HP') hp++;
+      if(c==='K')  k++;
+      rbi+=d.rbi||0; r+=d.r||0;
+      if(c==='1B'||c==='1B_內') b1++;
+      if(c==='2B') b2++;
+      if(c==='3B') b3++;
+      if(c==='HR'||c==='HR_內') hr++;
+    });
+    const a=ab>0?h/ab:null;
+    const sf_cnt=0; // 高飛犧牲打(SF)，目前系統無此數據
+    const obp=(ab+bb+hp+sf_cnt)>0?(h+bb+hp)/(ab+bb+hp+sf_cnt):null;
+    return {no:p.no,name:p.name,ab,h,avg:a,obp,bb,hp,k,rbi,r,b1,b2,b3,hr};
+  });
+}
+function renderTable(data){
+  const thead=document.querySelector('#ranking-table thead');
+  const tbody=document.querySelector('#ranking-table tbody');
+  thead.innerHTML='<tr>'+COLS.map(c=>{
+    const arrow=c.key===sortKey?(sortDir>0?'↑':'↓'):'';
+    return `<th class="sortable" onclick="sortTable('${c.key}')">${c.label}<span class="sort-arrow">${arrow}</span></th>`;
+  }).join('')+'</tr>';
+  tbody.innerHTML=data.map(d=>{
+    const avgTxt=fmtAvg(d.avg);
+    const obpTxt=d.obp!==null?d.obp.toFixed(3):'---';
+    return '<tr>'+COLS.map(c=>{
+      let v=d[c.key];
+      if(c.key==='avg') return `<td><span class="${d.ab>0&&d.avg>=0.4?'avg-hi':d.ab>0&&d.avg<0.2?'avg-lo':''}">${avgTxt}</span></td>`;
+      if(c.key==='obp') return `<td>${obpTxt}</td>`;
+      if(c.key==='no') return `<td>#${v}</td>`;
+      if(c.key==='hp') return `<td style="${v>0?'font-weight:700;color:#8e44ad;':''}">${v!==undefined?v:0}</td>`;
+      if(c.key==='hr'&&v>0) return `<td style="font-weight:700;color:#c0392b;">${v}</td>`;
+      if(c.key==='rbi'&&v>0) return `<td style="font-weight:700;color:#1a5276;">${v}</td>`;
+      return `<td>${v!==undefined?v:0}</td>`;
+    }).join('')+'</tr>';
+  }).join('');
+}
+let tableData=[];
+function sortTable(key){
+  if(sortKey===key)sortDir*=-1; else{sortKey=key;sortDir=-1;}
+  tableData.sort((a,b)=>{
+    const va=a[key]??-Infinity,vb=b[key]??-Infinity;
+    return(va>vb?1:va<vb?-1:0)*sortDir;
+  });
+  const q=document.getElementById('search-input').value.trim();
+  renderTable(tableData.filter(d=>!q||d.name.includes(q)||String(d.no).includes(q)));
+}
+function filterTable(){
+  const q=document.getElementById('search-input').value.trim();
+  renderTable(tableData.filter(d=>!q||d.name.includes(q)||String(d.no).includes(q)));
+}
+function renderRankingCharts(){
+  const minAB_rank=TEAM_GAMES.length*2;
+  const eligibleAvg=tableData.filter(d=>d.ab>=minAB_rank&&d.avg!==null).sort((a,b)=>b.avg-a.avg).slice(0,10);
+  const cAvg=getChart('chart-rank-avg');
+  cAvg.setOption({tooltip:{trigger:'axis'},
+    xAxis:{type:'value',axisLabel:{formatter:v=>v.toFixed(3)}},
+    yAxis:{type:'category',data:eligibleAvg.map(d=>`#${d.no} ${d.name}`).reverse()},
+    series:[{type:'bar',data:eligibleAvg.map(d=>+d.avg.toFixed(3)).reverse(),
+      itemStyle:{color:'#005087'},label:{show:true,position:'right',formatter:'{c}'}}]});
+  // 更新資格門檻說明
+  const el=document.getElementById('rank-avg-footnote');
+  if(el) el.textContent=`※ 資格門檻：累積打數 ≥ ${TEAM_GAMES.length} 場 × 2 = ${minAB_rank} 打數`;
+  const topH=[...tableData].sort((a,b)=>b.h-a.h).slice(0,10);
+  const cH=getChart('chart-rank-hits');
+  cH.setOption({tooltip:{trigger:'axis'},
+    xAxis:{type:'value',minInterval:1},
+    yAxis:{type:'category',data:topH.map(d=>`#${d.no} ${d.name}`).reverse()},
+    series:[{type:'bar',data:topH.map(d=>d.h).reverse(),
+      itemStyle:{color:'#e67e22'},label:{show:true,position:'right'}}]});
+}
+
+// ===== TAB 4: 上傳 =====
+const DEFAULT_PLAYERS=JSON.parse(JSON.stringify(PLAYERS));
+const DEFAULT_TEAM_GAMES=JSON.parse(JSON.stringify(TEAM_GAMES));
+
+function downloadTemplate(){
+  const wb=XLSX.utils.book_new();
+  const maxIn=5; // 預設 5 局
+  // === 第一行：群組標題（合併儲存格用）===
+  const row1=['','','','',''];
+  ['打擊球員-背號','打擊球員-姓名','打擊內容','打點(RBI)','得分(R)'].forEach(label=>{
+    row1.push(label);
+    for(let i=1;i<maxIn;i++) row1.push('');
+  });
+  // === 第二行：欄位子標題 ===
+  const row2=['賽程','場次','出賽球隊','對戰球隊','打序'];
+  for(let g=0;g<5;g++) for(let i=1;i<=maxIn;i++) row2.push(i+'局');
+  // === 範例資料列（9棒打序 × 1場） ===
+  const sampleNames={1:'',2:'',3:'',4:'',5:'',6:'',7:'',8:'',9:''};
+  const rows=[row1,row2];
+  for(let seq=1;seq<=9;seq++){
+    const row=['2025/05/10',1,'U10','對手隊',seq];
+    for(let g=0;g<5;g++) for(let i=1;i<=maxIn;i++) row.push('');
+    rows.push(row);
+  }
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  // 欄寬
+  ws['!cols']=[{wch:12},{wch:6},{wch:10},{wch:10},{wch:6}];
+  for(let g=0;g<5;g++) for(let i=0;i<maxIn;i++) ws['!cols'].push({wch:g===2?12:8});
+  // 合併第一行的群組標題
+  ws['!merges']=[
+    {s:{r:0,c:5}, e:{r:0,c:5+maxIn-1}},       // 打擊球員-背號
+    {s:{r:0,c:5+maxIn}, e:{r:0,c:5+maxIn*2-1}}, // 打擊球員-姓名
+    {s:{r:0,c:5+maxIn*2}, e:{r:0,c:5+maxIn*3-1}}, // 打擊內容
+    {s:{r:0,c:5+maxIn*3}, e:{r:0,c:5+maxIn*4-1}}, // 打點(RBI)
+    {s:{r:0,c:5+maxIn*4}, e:{r:0,c:5+maxIn*5-1}}  // 得分(R)
+  ];
+  XLSX.utils.book_append_sheet(wb,ws,'打擊數據');
+  // === 說明工作表 ===
+  const wsNote=XLSX.utils.aoa_to_sheet([
+    ['欄位說明'],
+    ['賽程','填寫日期或賽事名稱，例如 2025/05/10'],
+    ['場次','場次編號（數字），用於圖表分組'],
+    ['出賽球隊','出賽隊名'],
+    ['對戰球隊','對手隊名'],
+    ['打序','該行代表第幾棒（1~9）'],
+    ['打擊球員-背號','各局上場球員的背號，同打序不同局可換人'],
+    ['打擊球員-姓名','各局上場球員的姓名'],
+    ['打擊內容','打擊結果代碼（見下方）'],
+    ['','1B = 一壘安打'],
+    ['','2B = 二壘安打'],
+    ['','3B = 三壘安打'],
+    ['','HR = 全壘打'],
+    ['','BB = 保送（四壞球）'],
+    ['','K = 三振'],
+    ['','HP = 觸身球'],
+    ['','出局 或 留空 = 未達壘（計打數不計安打）'],
+    ['打點(RBI)','該打席獲得的打點（數字）'],
+    ['得分(R)','該打席得分（數字）']
+  ]);
+  wsNote['!cols']=[{wch:16},{wch:40}];
+  XLSX.utils.book_append_sheet(wb,wsNote,'填寫說明');
+  XLSX.writeFile(wb,'U10打擊數據範本.xlsx');
+}
+function handleFileUpload(e){
+  const file=e.target.files[0]; if(!file)return;
+  document.getElementById('file-chosen').style.display='block';
+  document.getElementById('file-chosen').textContent='📄 已選擇：'+file.name;
+  const reader=new FileReader();
+  reader.onload=function(ev){
+    try{
+      const wb=XLSX.read(ev.target.result,{type:'binary'});
+      const sn=wb.SheetNames.find(n=>n.includes('打擊'))||wb.SheetNames[0];
+      const rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:''});
+      parseUploadedData(rows,file.name);
+    }catch(err){showUploadMsg('error','❌ 檔案解析失敗：'+err.message);}
+  };
+  reader.readAsBinaryString(file);
+}
+let pendingMap=null,pendingGames=0,pendingBD=null,pendingBatDetail=null;
+
+// 打擊內容代碼對應表（ab:1=計打數、h=安打、bb=保送、k=三振、hp=觸身；ab:0=不計打數）
+const HIT_CODE_MAP={
+  // ── 安打 ──
+  '1B':{h:1,b1:1,ab:1},'一壘安打':{h:1,b1:1,ab:1},'一安':{h:1,b1:1,ab:1},
+  '2B':{h:1,b2:1,ab:1},'二壘安打':{h:1,b2:1,ab:1},'二安':{h:1,b2:1,ab:1},
+  '3B':{h:1,b3:1,ab:1},'三壘安打':{h:1,b3:1,ab:1},'三安':{h:1,b3:1,ab:1},
+  'HR':{h:1,hr:1,ab:1},'全壘打':{h:1,hr:1,ab:1},'全壘':{h:1,hr:1,ab:1},
+  'HR_內':{h:1,hr:1,ab:1},'場內全壘打':{h:1,hr:1,ab:1}, // 場內全壘打
+  // ── 保送/觸身 ──
+  'BB':{bb:1},'保送':{bb:1},'四壞':{bb:1},'四壞球':{bb:1},
+  'HP':{hp:1},'HBP':{hp:1},'觸身':{hp:1},'觸身球':{hp:1},
+  // ── 三振 ──
+  'K':{k:1,ab:1},'三振':{k:1,ab:1},'K振':{k:1,ab:1},
+  // ── 出局（計打數）──
+  'GO':{ab:1},'滾地':{ab:1},'滾地出局':{ab:1},
+  'FO':{ab:1},'飛球':{ab:1},'飛球出局':{ab:1},'高飛':{ab:1},
+  'FO_內':{ab:1},'內野高飛':{ab:1},'內飛':{ab:1},
+  'FC':{ab:1},'野手選擇':{ab:1},
+  'DP':{ab:1},'雙殺':{ab:1},'雙殺打':{ab:1},
+  '出局':{ab:1},'平飛':{ab:1},'滾地滾':{ab:1},
+  // ── 到壘失誤（守備失誤，計打數不計安打）──
+  'E_內':{ab:1},'E内':{ab:1},'內野失誤':{ab:1},
+  'E_外':{ab:1},'E外':{ab:1},'外野失誤':{ab:1},
+  'E':{ab:1},
+  // ── 犧牲（不計打數）──
+  'SF':{ab:0},'犧牲飛球':{ab:0},
+  'SAC':{ab:0},'犧牲觸擊':{ab:0},'犧牲':{ab:0},'SH':{ab:0}
+};
+
+function parseUploadedData(rows,fname){
+  if(rows.length<2){showUploadMsg('error','❌ 資料不足，請確認格式');return;}
+  // 新格式判斷：掃描前3行，任一行首欄含「賽程」即視為新格式
+  const isNew = rows.slice(0,3).some(row=>String(row&&row[0]||'').trim()==='賽程')
+    || rows.slice(0,3).some(row=>row&&row.some(c=>String(c||'').trim()==='賽程'&&row.some(c2=>String(c2||'').trim()==='場次')));
+  if(isNew) parseNewFormat(rows,fname);
+  else parseOldFormat(rows,fname);
+}
+
+function parseNewFormat(rows,fname){
+  // Step1: 定位含「賽程」的標題行
+  let headerRowIdx=-1;
+  for(let i=0;i<Math.min(rows.length,5);i++){
+    if(rows[i]&&rows[i].some(c=>String(c||'').trim()==='賽程')){ headerRowIdx=i; break; }
+  }
+  if(headerRowIdx<0){showUploadMsg('error','❌ 找不到「賽程」標題行，請確認格式');return;}
+
+  const h1=rows[headerRowIdx].map(c=>String(c||'').trim());
+  const h0=headerRowIdx>0?rows[headerRowIdx-1].map(c=>String(c||'').trim()):[];
+
+  // Step2: 從標題行找固定欄
+  const colGame=h1.findIndex(v=>v==='場次');
+  const colSeq =h1.findIndex(v=>v==='打序'||v==='棒序');
+  if(colGame<0||colSeq<0){
+    showUploadMsg('error',`❌ 標題行找不到「場次」或「打序」欄。偵測到的欄位：${h1.filter(v=>v).join('、')}`);
+    return;
+  }
+
+  // Step3: 找群組欄 — 依序嘗試 h0、h1
+  const grp={no:-1,name:-1,content:-1,rbi:-1,r:-1};
+  const scanForGrp=(arr)=>{
+    arr.forEach((v,i)=>{
+      if(v.includes('背號')&&grp.no<0)                             grp.no=i;
+      if(v.includes('姓名')&&grp.name<0)                           grp.name=i;
+      if(v.includes('打擊內容')&&grp.content<0)                    grp.content=i;
+      if((v.includes('打點')||v==='RBI')&&grp.rbi<0)               grp.rbi=i;
+      if((v.includes('得分')||v==='R')&&grp.r<0&&!v.includes('RBI')&&!v.includes('打點')) grp.r=i;
+    });
+  };
+  scanForGrp(h0);   // 先掃群組標題行
+  scanForGrp(h1);   // 再掃欄位標題行（補漏）
+
+  if(grp.no<0||grp.content<0){
+    const h0preview=h0.filter(v=>v).slice(0,10).join('、')||'（空）';
+    const h1preview=h1.filter(v=>v).slice(0,10).join('、');
+    showUploadMsg('error',
+      `❌ 找不到群組欄。`+
+      `\n偵測：背號欄=${grp.no>=0?'第'+(grp.no+1)+'欄':'未找到'}，打擊內容欄=${grp.content>=0?'第'+(grp.content+1)+'欄':'未找到'}`+
+      `\n第${headerRowIdx}行：${h0preview}`+
+      `\n第${headerRowIdx+1}行：${h1preview}`+
+      `\n→ 請確認 Excel 有「打擊球員-背號」與「打擊內容」群組標題`);
+    return;
+  }
+
+  // Step4: 找最大局次
+  let maxInn=0;
+  h1.forEach(v=>{ const m=String(v).match(/^(\d+)局$/); if(m) maxInn=Math.max(maxInn,parseInt(m[1])); });
+  if(!maxInn){
+    showUploadMsg('error','❌ 找不到「1局」「2局」等局次欄位，請確認標題行格式');
+    return;
+  }
+
+  // Step5: 解析資料列（強化版：直接用 String() 轉換，不用 || 避免 0 被視為 falsy）
+  const bdMap={};
+  let lastSeq=0; // 記憶最近一次有效打序，處理合併儲存格造成空白的情況
+  let lastGm=0;  // 記憶最近一次有效場次，換場時重置 lastSeq
+  for(let r=headerRowIdx+1;r<rows.length;r++){
+    const row=rows[r];
+    if(!row) continue;
+    // 判斷是否為全空列（只看前10欄）
+    const isEmptyRow = row.slice(0,Math.max(grp.content+maxInn,20)).every(c=>c===''||c===null||c===undefined);
+    if(isEmptyRow) continue;
+    const gmStr=String(row[colGame]===undefined||row[colGame]===''?'':row[colGame]).trim();
+    const gm=parseInt(gmStr.replace(/[^0-9]/g,''))||0; // 支援 "#1" "第1場" 等格式
+    const seqStr=String(row[colSeq]===undefined||row[colSeq]===''?'':row[colSeq]).trim();
+    // 強化解析：先抽取純數字（支援「第1棒」「1棒」「1st」等格式），與 gm 解析方式一致
+    const seqParsed=parseInt(seqStr.replace(/[^0-9]/g,''))||0;
+    // 若場次換了則重置 lastSeq；若打序欄空白或無法解析（合併儲存格）則沿用上一列的打序
+    if(gm && gm!==lastGm){ lastSeq=0; lastGm=gm; }
+    if(seqParsed>0) lastSeq=seqParsed;
+    const seq=lastSeq; // 最終使用的打序值
+    if(!gm) continue;
+    for(let inn=1;inn<=maxInn;inn++){
+      const noCell=row[grp.no+(inn-1)];
+      const noRaw=String(noCell===undefined||noCell===''?'':noCell).trim();
+      if(!noRaw||noRaw==='-') continue;
+      const no=parseInt(noRaw); if(isNaN(no)||no===0) continue;
+      const nmCell=grp.name>=0?row[grp.name+(inn-1)]:'';
+      const nm=String(nmCell===undefined||nmCell===''?'':nmCell).trim();
+      const ctCell=row[grp.content+(inn-1)];
+      const ct=String(ctCell===undefined||ctCell===''?'':ctCell).trim();
+      const rbiCell=grp.rbi>=0?row[grp.rbi+(inn-1)]:0;
+      const rbiV=parseInt(String(rbiCell===undefined||rbiCell===''?0:rbiCell))||0;
+      const rCell=grp.r>=0?row[grp.r+(inn-1)]:0;
+      const rV=parseInt(String(rCell===undefined||rCell===''?0:rCell))||0;
+      // ── 逐打席明細（保留 inning / seq，供打擊記錄明細頁使用）──
+      if(ct&&ct!=='-'){
+        if(!Array.isArray(window._batDetailBuf)) window._batDetailBuf=[];
+        window._batDetailBuf.push({game:gm,no,name:nm||String(no),seq,inning:inn,content:ct,rbi:rbiV,r:rV});
+      }
+      const key=`${gm}_${no}`;
+      if(!bdMap[key]) bdMap[key]={gm,no,name:nm||String(no),seq,ab:0,h:0,bb:0,hp:0,k:0,b1:0,b2:0,b3:0,hr:0,rbi:0,r:0};
+      if(nm) bdMap[key].name=nm;
+      const info=HIT_CODE_MAP[ct]||HIT_CODE_MAP[ct.toUpperCase()];
+      if(info){
+        if(info.ab) bdMap[key].ab++; if(info.h)  bdMap[key].h++;
+        if(info.bb) bdMap[key].bb++; if(info.hp) bdMap[key].hp++;
+        if(info.k)  bdMap[key].k++;  if(info.b1) bdMap[key].b1++;
+        if(info.b2) bdMap[key].b2++; if(info.b3) bdMap[key].b3++;
+        if(info.hr) bdMap[key].hr++;
+      } else if(ct&&ct!=='-') { bdMap[key].ab++; }
+      bdMap[key].rbi+=rbiV; bdMap[key].r+=rV;
+    }
+  }
+  pendingBD=Object.values(bdMap);
+  const rawBuf=window._batDetailBuf||[];
+  // ── 後補修正：若 seq=0，嘗試從 bdMap 取得同一場次+球員的打序 ──
+  rawBuf.forEach(d=>{
+    if(d.seq===0){
+      const e=bdMap[`${d.game}_${d.no}`];
+      if(e&&e.seq>0) d.seq=e.seq;
+    }
+  });
+  pendingBatDetail=rawBuf;
+  window._batDetailBuf=null;
+  if(!pendingBD.length){
+    // 顯示前3筆資料列的原始值，協助診斷
+    let diagMsg='';
+    for(let r=headerRowIdx+1;r<Math.min(rows.length,headerRowIdx+5);r++){
+      const row=rows[r]; if(!row) continue;
+      const gmV=row[colGame]; const noV=row[grp.no]; const ctV=row[grp.content];
+      diagMsg+=`\n第${r+1}列 → 場次欄[${colGame}]=${JSON.stringify(gmV)}，背號欄[${grp.no}]=${JSON.stringify(noV)}，打擊內容欄[${grp.content}]=${JSON.stringify(ctV)}`;
+    }
+    showUploadMsg('error',
+      `❌ 未解析到有效打擊數據。`+
+      `\n欄位偵測：場次=第${colGame+1}欄，背號起始=第${grp.no+1}欄，打擊內容=第${grp.content+1}欄，${maxInn}局`+
+      `\n前幾列原始值：${diagMsg||'（無資料列）'}`+
+      `\n→ 請截圖以上資訊回報`);
+    return;
+  }
+  showPreviewBD(pendingBD,fname);
+}
+
+function parseOldFormat(rows,fname){
+  const header=rows[0].map(h=>String(h).trim());
+  const CM={'背號':'no','姓名':'name','場次':'gm','打數(AB)':'ab','安打(H)':'h',
+    '保送(BB)':'bb','三振(K)':'k','打點(RBI)':'rbi','得分(R)':'r',
+    '一壘打(1B)':'b1','二壘打(2B)':'b2','三壘打(3B)':'b3','全壘打(HR)':'hr'};
+  const ci={};
+  header.forEach((h,i)=>{if(CM[h])ci[CM[h]]=i;});
+  const miss=['no','name','gm','ab','h'].filter(k=>ci[k]===undefined);
+  if(miss.length){showUploadMsg('error','❌ 缺少必要欄位：'+miss.join(', '));return;}
+  const getV=(row,key)=>ci[key]!==undefined?(parseInt(row[ci[key]])||0):0;
+  const pm={},maxG={v:0};
+  for(let r=1;r<rows.length;r++){
+    if(!rows[r]||rows[r][ci.no]===undefined||rows[r][ci.no]==='')continue;
+    const no=parseInt(rows[r][ci.no]);const nm=String(rows[r][ci.name]||'');
+    const gm=parseInt(rows[r][ci.gm])-1;
+    if(isNaN(no)||isNaN(gm)||gm<0)continue;
+    if(!pm[no])pm[no]={no,name:nm,games:{}};
+    maxG.v=Math.max(maxG.v,gm+1);
+    pm[no].games[gm]=[getV(rows[r],'ab'),getV(rows[r],'h'),getV(rows[r],'bb'),getV(rows[r],'k'),
+      getV(rows[r],'rbi'),getV(rows[r],'r'),getV(rows[r],'b1'),getV(rows[r],'b2'),getV(rows[r],'b3'),getV(rows[r],'hr')];
+  }
+  pendingMap=pm;pendingGames=maxG.v||4;
+  showPreview(pm,pendingGames,fname);
+}
+function showPreviewBD(bd,fname){
+  const gmSet=[...new Set(bd.map(d=>d.gm))].sort((a,b)=>a-b);
+  const plSet=[...new Set(bd.map(d=>d.no))].sort((a,b)=>a-b);
+  let html=`<div class="preview-info">✅ 解析成功「${fname||''}」— 共 <strong>${plSet.length}</strong> 位球員，<strong>${gmSet.length}</strong> 場賽事（新格式）</div>`;
+  html+='<div class="preview-wrap"><table class="preview-table"><thead><tr>';
+  html+='<th>背號</th><th>姓名</th><th>場次</th><th>打數</th><th>安打</th><th>打率</th><th>打點</th><th>得分</th><th>1B</th><th>2B</th><th>3B</th><th>HR</th><th>BB</th><th>K</th><th>HP</th>';
+  html+='</tr></thead><tbody>';
+  [...bd].sort((a,b)=>a.gm-b.gm||a.no-b.no).forEach(d=>{
+    const avg=d.ab>0?(d.h/d.ab).toFixed(3):'---';
+    html+=`<tr><td>#${d.no}</td><td>${d.name}</td><td>#${d.gm}</td><td>${d.ab}</td><td>${d.h}</td>`;
+    html+=`<td style="color:#e67e22;font-weight:bold">${avg}</td><td>${d.rbi}</td><td>${d.r}</td>`;
+    html+=`<td>${d.b1}</td><td>${d.b2}</td><td>${d.b3}</td><td>${d.hr}</td><td>${d.bb}</td><td>${d.k}</td><td>${d.hp}</td></tr>`;
+  });
+  html+='</tbody></table></div>';
+  document.getElementById('preview-area').innerHTML=html;
+  document.getElementById('preview-sec').style.display='block';
+  document.getElementById('apply-success').style.display='none';
+}
+function showPreview(pm,ng,fname){
+  const players=Object.values(pm).sort((a,b)=>a.no-b.no);
+  let html=`<div class="preview-info">✅ 解析成功「${fname||''}」— 共 <strong>${players.length}</strong> 位球員，<strong>${ng}</strong> 場賽事</div>`;
+  html+='<div class="preview-wrap"><table class="preview-table"><thead><tr><th>背號</th><th>姓名</th>';
+  for(let i=0;i<ng;i++)html+=`<th>#${i+1} 打數</th><th>#${i+1} 安打</th><th>#${i+1} 打率</th>`;
+  html+='<th>累計打數</th><th>累計安打</th><th>累計打率</th></tr></thead><tbody>';
+  players.forEach(p=>{
+    let tA=0,tH=0;
+    html+=`<tr><td>#${p.no}</td><td>${p.name}</td>`;
+    for(let i=0;i<ng;i++){
+      const g=p.games[i]||[0,0,0,0,0,0,0,0,0,0];
+      tA+=g[0];tH+=g[1];
+      html+=`<td>${g[0]}</td><td>${g[1]}</td><td>${g[0]>0?(g[1]/g[0]).toFixed(3):'---'}</td>`;
+    }
+    html+=`<td><strong>${tA}</strong></td><td><strong>${tH}</strong></td><td><strong style="color:#e67e22">${tA>0?(tH/tA).toFixed(3):'---'}</strong></td></tr>`;
+  });
+  html+='</tbody></table></div>';
+  document.getElementById('preview-area').innerHTML=html;
+  document.getElementById('preview-sec').style.display='block';
+  document.getElementById('apply-success').style.display='none';
+}
+function showUploadMsg(type,msg){
+  document.getElementById('preview-area').innerHTML=`<div class="${type==='error'?'upload-error':'preview-info'}">${msg}</div>`;
+  document.getElementById('preview-sec').style.display='block';
+}
+// 從 pendingBD（彙整格式）同步更新 BATTING_DATA（打席明細）、PLAYERS、TEAM_GAMES
+function _syncLegacyFromBD(skipBattingData){
+  // pendingBD 每筆為球員-場次彙整：{gm, no, name, ab, h, bb, k, hp, rbi, r, b1, b2, b3, hr}
+  // 轉成打席明細推入 BATTING_DATA，使 calcTeamGameStats/calcPlayerStats 可正確計算
+  // skipBattingData=true 時：只同步 PLAYERS / TEAM_GAMES，不覆蓋已有的逐打席 BATTING_DATA
+  const gmSet=[...new Set(pendingBD.map(d=>d.gm))].sort((a,b)=>a-b);
+  const gmIndex={}; gmSet.forEach((g,i)=>gmIndex[g]=i+1); // gm → 1-based game index
+  if(!skipBattingData){
+  BATTING_DATA.length=0;
+  pendingBD.forEach(d=>{
+    const gIdx=gmIndex[d.gm]||d.gm;
+    // 展開為逐打席明細（用統計反推 content）：安打類型依序 1B/2B/3B/HR/BB/HP/K/出局
+    const expand=(n,content,rbi=0,r=0)=>{ for(let i=0;i<n;i++) BATTING_DATA.push({game:gIdx,no:d.no,name:d.name,content,rbi:i===0?rbi:0,r:i===0?r:0,seq:0,inning:0}); };
+    expand(d.b1,'1B'); expand(d.b2,'2B'); expand(d.b3,'3B'); expand(d.hr,'HR');
+    expand(d.bb,'BB'); expand(d.hp||0,'HP'); expand(d.k,'K');
+    const otherAB=d.ab-(d.b1+d.b2+d.b3+d.hr+d.k);
+    expand(Math.max(0,otherAB),'GO');
+    // 補 rbi/r 到第一筆（簡易方式：掛在第一個 1B 或 GO 上）
+    if(BATTING_DATA.length>0){
+      const myRows=BATTING_DATA.filter(x=>x.game===gIdx&&x.no===d.no);
+      if(myRows.length>0){
+        const totalRBI=myRows.reduce((s,x)=>s+x.rbi,0);
+        const totalR=myRows.reduce((s,x)=>s+x.r,0);
+        if(totalRBI===0&&d.rbi>0) myRows[0].rbi=d.rbi;
+        if(totalR===0&&d.r>0) myRows[0].r=d.r;
+      }
+    }
+  });
+  } // end if(!skipBattingData)
+  // 同步 PLAYERS
+  const gmNums=gmSet;
+  PLAYERS.length=0;
+  const pMap={};
+  pendingBD.forEach(d=>{
+    if(!pMap[d.no]) pMap[d.no]={no:d.no,name:d.name,games:{}};
+    const gIdx=(gmIndex[d.gm]||d.gm)-1;
+    pMap[d.no].games[gIdx]=[d.ab,d.h,d.bb,d.k,d.rbi,d.r,d.b1,d.b2,d.b3,d.hr];
+  });
+  Object.values(pMap).sort((a,b)=>a.no-b.no).forEach(p=>{
+    const gs=[];
+    for(let i=0;i<gmNums.length;i++) gs.push(p.games[i]||[0,0,0,0,0,0,0,0,0,0]);
+    PLAYERS.push({no:p.no,name:p.name,games:gs});
+  });
+  // 同步 TEAM_GAMES
+  TEAM_GAMES.length=0;
+  gmNums.forEach((gm,idx)=>{
+    let ab=0,h=0,bb=0,k=0,hp=0,rbi=0,r=0,b1=0,b2=0,b3=0,hr=0;
+    pendingBD.filter(d=>d.gm===gm).forEach(d=>{ab+=d.ab;h+=d.h;bb+=d.bb;k+=d.k;hp+=d.hp||0;rbi+=d.rbi;r+=d.r;b1+=d.b1;b2+=d.b2;b3+=d.b3;hr+=d.hr;});
+    const avgV=ab>0?h/ab:0,obpV=(ab+bb+hp)>0?(h+bb+hp)/(ab+bb+hp):0,slgV=ab>0?(b1+b2*2+b3*3+hr*4)/ab:0;
+    TEAM_GAMES.push({label:`#${gm}`,ab,h,bb,hp,k,rbi,r,b1,b2,b3,hr,avg:avgV,obp:obpV,slg:slgV});
+  });
+}
+
+function applyData(){
+  // === 新格式（逐打席明細）：直接用 pendingBatDetail 覆蓋 BATTING_DATA ===
+  if(pendingBatDetail&&pendingBatDetail.length){
+    BATTING_DATA.length=0;
+    pendingBatDetail.forEach(d=>BATTING_DATA.push(d));
+    _syncLegacyFromBD(true); // 同步 PLAYERS / TEAM_GAMES，保留已填入的逐打席 BATTING_DATA
+    tableData=buildTableData();tableData.sort((a,b)=>a.no-b.no);
+    const sel=document.getElementById('player-select');sel.innerHTML='';
+    buildPlayerSelect();
+    ['chart-team-avg','chart-team-hits','chart-team-rbi','chart-player',
+     'chart-rank-avg','chart-rank-hits'].forEach(id=>{
+      if(charts[id]){charts[id].dispose();delete charts[id];}
+    });
+    renderTeam();
+    renderTable(tableData);
+    renderAwards();
+    renderRankingCharts();
+    initBattingSelects();renderBatting();
+    const sm=document.getElementById('apply-success');sm.style.display='block';
+    setTimeout(()=>{document.querySelectorAll('nav button')[0].click();},1500);
+    return;
+  }
+  // === 新格式（彙整，無逐打席）：透過 _syncLegacyFromBD() 同步更新 ===
+  if(pendingBD){
+    _syncLegacyFromBD(); // 同步所有資料結構
+    tableData=buildTableData();tableData.sort((a,b)=>a.no-b.no);
+    const sel=document.getElementById('player-select');sel.innerHTML='';
+    buildPlayerSelect();
+    // 清除所有打擊相關圖表快取
+    ['chart-team-avg','chart-team-hits','chart-team-rbi','chart-player',
+     'chart-rank-avg','chart-rank-hits'].forEach(id=>{
+      if(charts[id]){charts[id].dispose();delete charts[id];}
+    });
+    renderTeam();
+    renderTable(tableData);
+    // ★ 強制更新所有打擊相關頁籤（不論是否處於 active 狀態）
+    renderAwards();
+    renderRankingCharts();
+    initBattingSelects();renderBatting();
+    const sm=document.getElementById('apply-success');sm.style.display='block';
+    setTimeout(()=>{document.querySelectorAll('nav button')[0].click();},1500);
+    return;
+  }
+  if(!pendingMap)return;
+  const ng=pendingGames;const empty=[0,0,0,0,0,0,0,0,0,0];
+  PLAYERS.length=0;
+  Object.values(pendingMap).sort((a,b)=>a.no-b.no).forEach(p=>{
+    const gs=[];
+    for(let i=0;i<ng;i++)gs.push(p.games[i]?[...p.games[i]]:[...empty]);
+    PLAYERS.push({no:p.no,name:p.name,games:gs});
+  });
+  TEAM_GAMES.length=0;
+  for(let i=0;i<ng;i++){
+    let ab=0,h=0,bb=0,k=0,rbi=0,r=0,b1=0,b2=0,b3=0,hr=0;
+    PLAYERS.forEach(p=>{const g=p.games[i]||empty;ab+=g[0];h+=g[1];bb+=g[2];k+=g[3];rbi+=g[4];r+=g[5];b1+=g[6];b2+=g[7];b3+=g[8];hr+=g[9];});
+    const avgV=ab>0?h/ab:0,obpV=(ab+bb)>0?(h+bb)/(ab+bb):0;
+    const slgV=ab>0?(b1+b2*2+b3*3+hr*4)/ab:0;
+    TEAM_GAMES.push({label:`#${i+1}`,ab,h,bb,k,rbi,r,b1,b2,b3,hr,avg:avgV,obp:obpV,slg:slgV});
+  }
+  tableData=buildTableData();tableData.sort((a,b)=>a.no-b.no);
+  const sel=document.getElementById('player-select');sel.innerHTML='';
+  buildPlayerSelect();
+  ['chart-team-avg','chart-team-hits','chart-team-rbi','chart-player','chart-rank-avg','chart-rank-hits'].forEach(id=>{
+    if(charts[id]){charts[id].dispose();delete charts[id];}
+  });
+  renderTeam();renderTable(tableData);
+  renderAwards();
+  renderRankingCharts();
+  initBattingSelects();renderBatting();
+  const sm=document.getElementById('apply-success');sm.style.display='block';
+  setTimeout(()=>{document.querySelectorAll('nav button')[0].click();},1500);
+}
+function updateDefaultData(){
+  try{
+    localStorage.setItem('u10_default_players',JSON.stringify(PLAYERS));
+    localStorage.setItem('u10_default_team_games',JSON.stringify(TEAM_GAMES));
+    const sm=document.getElementById('setdefault-success');sm.style.display='block';
+    setTimeout(()=>{sm.style.display='none';},3000);
+  }catch(e){alert('儲存失敗：'+e.message);}
+}
+function resetData(){
+  // 優先從 localStorage 讀取最後一次「更新預設」的數據，無則 fallback 至 HTML 初始值
+  try{
+    const lsP=localStorage.getItem('u10_default_players');
+    const lsG=localStorage.getItem('u10_default_team_games');
+    if(lsP&&lsG){
+      PLAYERS.length=0;JSON.parse(lsP).forEach(p=>PLAYERS.push(JSON.parse(JSON.stringify(p))));
+      TEAM_GAMES.length=0;JSON.parse(lsG).forEach(g=>TEAM_GAMES.push(JSON.parse(JSON.stringify(g))));
+    }else{
+      PLAYERS.length=0;DEFAULT_PLAYERS.forEach(p=>PLAYERS.push(JSON.parse(JSON.stringify(p))));
+      TEAM_GAMES.length=0;DEFAULT_TEAM_GAMES.forEach(g=>TEAM_GAMES.push(JSON.parse(JSON.stringify(g))));
+    }
+  }catch(e){
+    PLAYERS.length=0;DEFAULT_PLAYERS.forEach(p=>PLAYERS.push(JSON.parse(JSON.stringify(p))));
+    TEAM_GAMES.length=0;DEFAULT_TEAM_GAMES.forEach(g=>TEAM_GAMES.push(JSON.parse(JSON.stringify(g))));
+  }
+  tableData=buildTableData();tableData.sort((a,b)=>a.no-b.no);
+  const sel=document.getElementById('player-select');sel.innerHTML='';
+  buildPlayerSelect();
+  ['chart-team-avg','chart-team-hits','chart-team-rbi','chart-player','chart-rank-avg','chart-rank-hits'].forEach(id=>{
+    if(charts[id]){charts[id].dispose();delete charts[id];}
+  });
+  renderTeam();renderTable(tableData);
+  renderAwards();
+  renderRankingCharts();
+  initBattingSelects();renderBatting();
+  pendingMap=null;
+  document.getElementById('preview-sec').style.display='none';
+  document.getElementById('file-chosen').style.display='none';
+  document.querySelectorAll('nav button')[0].click();
+}
+
+// ===== TAB 5: 打擊獎項 =====
+function renderAwards(){
+  const data=buildTableData();
+  const minAB=TEAM_GAMES.length*2;
+  const cats=[
+    {key:'avg',label:'打擊王',sort:(a,b)=>b.avg-a.avg,fmt:v=>v.toFixed(3),needQual:true},
+    {key:'h',label:'安打王',sort:(a,b)=>b.h-a.h,fmt:v=>String(v),needQual:false},
+    {key:'hr',label:'全壘打王',sort:(a,b)=>b.hr-a.hr,fmt:v=>String(v),needQual:false},
+    {key:'rbi',label:'打點王',sort:(a,b)=>b.rbi-a.rbi,fmt:v=>String(v),needQual:false},
+    {key:'r',label:'得分王',sort:(a,b)=>b.r-a.r,fmt:v=>String(v),needQual:false},
+    {key:'obp',label:'上壘王',sort:(a,b)=>b.obp-a.obp,fmt:v=>v.toFixed(3),needQual:true},
+    {key:'slg',label:'長打王',sort:(a,b)=>b.slg-a.slg,fmt:v=>v.toFixed(3),needQual:true},
+    {key:'ops',label:'攻擊王',sort:(a,b)=>b.ops-a.ops,fmt:v=>v.toFixed(3),needQual:true}
+  ];
+  const enriched=data.map(d=>({...d,
+    slg:d.ab>0?(d.b1+d.b2*2+d.b3*3+d.hr*4)/d.ab:null,
+    ops:(d.obp!==null&&d.ab>0)?d.obp+(d.b1+d.b2*2+d.b3*3+d.hr*4)/d.ab:null
+  }));
+  function buildGroups(d,cat){
+    const filtered=cat.needQual?d.filter(p=>p.ab>=minAB):d.filter(p=>p[cat.key]!==null&&p[cat.key]!==0);
+    const sorted=[...filtered].sort(cat.sort);
+    const grps=[];
+    for(const p of sorted){
+      const raw=p[cat.key];
+      if(raw===null||raw===0)break;
+      const disp=cat.fmt(raw);
+      if(grps.length>0&&grps[grps.length-1].disp===disp){
+        grps[grps.length-1].players.push(p);
+      }else{
+        if(grps.length>=3)break;
+        grps.push({disp,players:[p]});
+      }
+    }
+    return grps;
+  }
+  const groups=cats.map(c=>buildGroups(enriched,c));
+  const rankLabel=['Top 1','Top 2','Top 3'];
+  const rankClass=['rank-1','rank-2','rank-3'];
+  const tbody=document.getElementById('award-tbody');
+  tbody.innerHTML='';
+  for(let r=0;r<3;r++){
+    const tr=document.createElement('tr');
+    tr.className=rankClass[r];
+    let html=`<td class="rank-cell">${rankLabel[r]}</td>`;
+    groups.forEach((grps,ci)=>{
+      const grp=grps[r];
+      if(grp){
+        const nos=grp.players.map(p=>`#${p.no}`).join('<br>');
+        const nms=grp.players.map(p=>p.name).join('<br>');
+        html+=`<td class="no-cell${ci>0?' sep-col':''}">${nos}</td>`+
+              `<td class="name-cell">${nms}</td>`+
+              `<td class="val-cell">${grp.disp}</td>`;
+      }else{
+        html+=`<td class="${ci>0?'no-cell sep-col':'no-cell'}"></td><td class="name-cell"></td><td class="val-cell"></td>`;
+      }
+    });
+    tr.innerHTML=html;
+    tbody.appendChild(tr);
+  }
+  const fnGames=document.getElementById('fn-games');
+  const fnThreshold=document.getElementById('fn-threshold');
+  if(fnGames)fnGames.textContent=TEAM_GAMES.length;
+  if(fnThreshold)fnThreshold.textContent=minAB;
+}
+
+function setupDragDrop(){
+  const zone=document.getElementById('drop-zone');
+  zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('drag-over');});
+  zone.addEventListener('dragleave',()=>zone.classList.remove('drag-over'));
+  zone.addEventListener('drop',e=>{
+    e.preventDefault();zone.classList.remove('drag-over');
+    const file=e.dataTransfer.files[0];
+    if(file){handleFileUpload({target:{files:[file]}});}
+  });
+}
+
+function switchTab(name,btn){
+  document.querySelectorAll('.tab-content').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  btn.classList.add('active');
+  setTimeout(()=>Object.values(charts).forEach(c=>c&&c.resize()),50);
+  if(name==='ranking')renderRankingCharts();
+  if(name==='player')renderPlayerChart();
+  if(name==='awards')renderAwards();
+  if(name==='batting'){initBattingSelects();renderBatting();}
+  if(name==='defense')renderDefense();
+  if(name==='defranking')renderDefRanking();
+  if(name==='defawards')renderDefAwards();
+  if(name==='adjust'){renderAdjustTab();}
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  try{
+    const lp=localStorage.getItem('u10_default_players');
+    const ltg=localStorage.getItem('u10_default_team_games');
+    if(lp&&ltg){
+      const pArr=JSON.parse(lp),gArr=JSON.parse(ltg);
+      PLAYERS.length=0;pArr.forEach(p=>PLAYERS.push(JSON.parse(JSON.stringify(p))));
+      DEFAULT_PLAYERS.length=0;pArr.forEach(p=>DEFAULT_PLAYERS.push(JSON.parse(JSON.stringify(p))));
+      TEAM_GAMES.length=0;gArr.forEach(g=>TEAM_GAMES.push(JSON.parse(JSON.stringify(g))));
+      DEFAULT_TEAM_GAMES.length=0;gArr.forEach(g=>DEFAULT_TEAM_GAMES.push(JSON.parse(JSON.stringify(g))));
+    }
+  }catch(e){}
+  renderTeam();
+  buildPlayerSelect();
+  tableData=buildTableData();
+  tableData.sort((a,b)=>a.no-b.no);
+  renderTable(tableData);
+  setupDragDrop();
+  initDefenseSelects();
+  initBattingSelects();
+  renderBatting();
+});
+
+// ===== TAB 6: 守備記錄 =====
+const DEFENSE_DATA=[
+  {game:1,opponent:'YM忍者',seq:4,inning:1,no:64,name:'黃晨睿',pos:'SS',isError:false,content:'FC'},
+  {game:1,opponent:'YM忍者',seq:9,inning:3,no:9,name:'蕭沛庭',pos:'P',isError:false,content:'GO'},
+  {game:2,opponent:'上智隼鷹',seq:1,inning:1,no:72,name:'張世昀',pos:'1B',isError:true,content:'E_內'},
+  {game:2,opponent:'上智隼鷹',seq:4,inning:1,no:15,name:'陳冠安',pos:'P',isError:false,content:'GO'},
+  {game:2,opponent:'上智隼鷹',seq:6,inning:4,no:26,name:'莊閔程',pos:'2B',isError:false,content:'GO'},
+  {game:2,opponent:'上智隼鷹',seq:7,inning:2,no:15,name:'陳冠安',pos:'P',isError:false,content:'GO'},
+  {game:3,opponent:'竹北雷爵B',seq:1,inning:1,no:72,name:'張世昀',pos:'1B',isError:false,content:'FO_內'},
+  {game:4,opponent:'信義飛燕',seq:1,inning:1,no:50,name:'陳昱瑄',pos:'2B',isError:false,content:'GO'},
+  {game:4,opponent:'信義飛燕',seq:1,inning:2,no:9,name:'蕭沛庭',pos:'SS',isError:false,content:'GO'},
+  {game:4,opponent:'信義飛燕',seq:3,inning:1,no:50,name:'陳昱瑄',pos:'2B',isError:false,content:'GO'},
+  {game:4,opponent:'信義飛燕',seq:3,inning:2,no:72,name:'張世昀',pos:'1B',isError:false,content:'GO'},
+  {game:4,opponent:'信義飛燕',seq:9,inning:2,no:72,name:'張世昀',pos:'1B',isError:true,content:'E_內'},
+  {game:5,opponent:'竹北雷爵A',seq:2,inning:2,no:72,name:'張世昀',pos:'1B',isError:true,content:'E_內'},
+  {game:5,opponent:'竹北雷爵A',seq:3,inning:4,no:77,name:'林承熙',pos:'RF',isError:false,content:'FO'},
+  {game:5,opponent:'竹北雷爵A',seq:5,inning:3,no:72,name:'張世昀',pos:'1B',isError:true,content:'E_內'},
+  {game:5,opponent:'竹北雷爵A',seq:5,inning:4,no:82,name:'鄞圻睿',pos:'P',isError:false,content:'FC'},
+  {game:5,opponent:'竹北雷爵A',seq:6,inning:1,no:64,name:'黃晨睿',pos:'3B',isError:false,content:'FC'},
+  {game:6,opponent:'活力社區',seq:1,inning:3,no:9,name:'蕭沛庭',pos:'P',isError:false,content:'FC'},
+  {game:6,opponent:'活力社區',seq:3,inning:1,no:50,name:'陳昱瑄',pos:'1B',isError:false,content:'FO_內'},
+  {game:6,opponent:'活力社區',seq:3,inning:3,no:9,name:'蕭沛庭',pos:'P',isError:false,content:'GO'},
+  {game:6,opponent:'活力社區',seq:6,inning:2,no:9,name:'蕭沛庭',pos:'P',isError:false,content:'GO'},
+  {game:6,opponent:'活力社區',seq:7,inning:2,no:9,name:'蕭沛庭',pos:'P',isError:false,content:'GO'}
+];
+const DEFAULT_DEFENSE_DATA=JSON.parse(JSON.stringify(DEFENSE_DATA));
+
+const GAME_LABELS={
+  1:'第1場 vs YM忍者',2:'第2場 vs 上智隼鷹',3:'第3場 vs 竹北雷爵B',
+  4:'第4場 vs 信義飛燕',5:'第5場 vs 竹北雷爵A',6:'第6場 vs 活力社區'
+};
+
+function buildDefensePlayerList(){
+  const names={};
+  DEFENSE_DATA.forEach(d=>{ if(d.no!=null) names[d.no]=d.name; });
+  return Object.entries(names).sort((a,b)=>+a[0]-+b[0]).map(([no,name])=>({no:+no,name}));
+}
+
+function renderDefense(){
+  const viewMode=document.getElementById('def-view-mode').value;
+  const tbody=document.getElementById('def-tbody');
+  tbody.innerHTML='';
+  if(viewMode==='game'){
+    const selGame=+document.getElementById('def-game-sel').value;
+    if(selGame===0){
+      // 全隊累積：列 = 打序，欄 = 各場次
+      const allSeqs=[...new Set(DEFENSE_DATA.map(d=>d.seq))].sort((a,b)=>a-b);
+      const gameKeys=Object.keys(GAME_LABELS).map(Number).sort((a,b)=>a-b);
+      document.getElementById('def-thead-row').innerHTML=
+        '<th style="background:#34495e;">打序</th>'+gameKeys.map((g,idx)=>`<th class="${idx>0?'inning-sep':''}" style="background:#34495e;white-space:nowrap;">${GAME_LABELS[g]}</th>`).join('');
+      allSeqs.forEach(seq=>{
+        const tr=document.createElement('tr');
+        let html=`<td class="seq-cell">第${seq}棒</td>`;
+        gameKeys.forEach((g,idx)=>{
+          const entries=DEFENSE_DATA.filter(d=>d.seq===seq&&d.game===g);
+          const cls=idx>0?'inning-sep':'';
+          if(entries.length){
+            const badges=entries.map(e=>{
+              const errCls=e.isError?' error':'';
+              const ct=e.content?`<span style="font-size:.7rem;color:#555;display:block;margin-top:1px;">${e.content}</span>`:'';
+              const noStr=e.no!=null?`#${e.no} ${e.name}`:(e.name||'—');
+              return `<span class="pos-badge${errCls}">${noStr}｜${e.pos}${e.isError?' ❗':''}</span>${ct}`;
+            }).join('<br>');
+            html+=`<td class="${cls}">${badges}</td>`;
+          }else{
+            html+=`<td class="${cls}"><span style="color:#ccc">—</span></td>`;
+          }
+        });
+        tr.innerHTML=html;
+        tbody.appendChild(tr);
+      });
+    }else{
+      const rows=DEFENSE_DATA.filter(d=>d.game===selGame);
+      const seqs=[...new Set(rows.map(d=>d.seq))].sort((a,b)=>a-b);
+      const gameInnings=[...new Set(rows.map(d=>d.inning))].sort((a,b)=>a-b);
+      document.getElementById('def-thead-row').innerHTML=
+        '<th>守備內容</th>'+gameInnings.map((i,idx)=>`<th class="${idx>0?'inning-sep':''}">第${i}局</th>`).join('');
+      seqs.forEach(seq=>{
+        const tr=document.createElement('tr');
+        let html=`<td class="seq-cell">第${seq}棒</td>`;
+        gameInnings.forEach((inn,idx)=>{
+          const entries=rows.filter(d=>d.seq===seq&&d.inning===inn);
+          const cls=idx>0?'inning-sep':'';
+          if(entries.length){
+            const badges=entries.map(e=>{
+              const errCls=e.isError?' error':'';
+              const ct=e.content?`<span style="font-size:.7rem;color:#555;display:block;margin-top:1px;">${e.content}</span>`:'';
+              const noStr=e.no!=null?`#${e.no} ${e.name}`:(e.name||'—');
+              return `<span class="pos-badge${errCls}">${noStr}｜${e.pos}${e.isError?' ❗':''}</span>${ct}`;
+            }).join(' ');
+            html+=`<td class="${cls}">${badges}</td>`;
+          }else{
+            html+=`<td class="${cls}"><span style="color:#ccc">—</span></td>`;
+          }
+        });
+        tr.innerHTML=html;
+        tbody.appendChild(tr);
+      });
+    }
+  }else{
+    const selNo=+document.getElementById('def-player-sel').value;
+    if(selNo===0){
+      // 全隊累積：顯示全部紀錄
+      document.getElementById('def-thead-row').innerHTML='<th>場次</th><th>局數</th><th>打序</th><th>背號</th><th>姓名</th><th>守備內容</th><th>守備位置</th>';
+      const allRows=[...DEFENSE_DATA].sort((a,b)=>a.game-b.game||a.inning-b.inning||a.seq-b.seq);
+      allRows.forEach(e=>{
+        const tr=document.createElement('tr');
+        const errCls=e.isError?' error':'';
+        tr.innerHTML=`<td class="player-cell">${GAME_LABELS[e.game]}</td>`+
+          `<td>第${e.inning}局</td>`+
+          `<td>第${e.seq}棒</td>`+
+          `<td style="font-weight:700;color:#34495e;">${e.no!=null?'#'+e.no:'—'}</td>`+
+          `<td style="font-weight:600;">${e.name||'—'}</td>`+
+          `<td>${e.content||'—'}</td>`+
+          `<td><span class="pos-badge${errCls}">${e.pos}${e.isError?' ❗':''}</span></td>`;
+        tbody.appendChild(tr);
+      });
+    }else{
+      const rows=DEFENSE_DATA.filter(d=>d.no===selNo);
+      document.getElementById('def-thead-row').innerHTML='<th>場次</th><th>局數</th><th>守備內容</th><th>守備位置</th>';
+      if(!rows.length){
+        tbody.innerHTML='<tr><td colspan="4" style="color:#999;padding:20px;">該球員本季無守備記錄</td></tr>';
+        return;
+      }
+      rows.sort((a,b)=>a.game-b.game||a.inning-b.inning).forEach(e=>{
+        const tr=document.createElement('tr');
+        const errCls=e.isError?' error':'';
+        tr.innerHTML=`<td class="player-cell">${GAME_LABELS[e.game]}</td>`+
+          `<td>第${e.inning}局</td>`+
+          `<td>${e.content||'—'}</td>`+
+          `<td><span class="pos-badge${errCls}">${e.pos}${e.isError?' ❗':''}</span></td>`;
+        tbody.appendChild(tr);
+      });
+    }
+  }
+  const total=DEFENSE_DATA.length;
+  const errCount=DEFENSE_DATA.filter(d=>d.isError).length;
+  document.getElementById('def-summary').textContent=`共 ${total} 筆守備記錄，其中 ${errCount} 筆守備失誤`;
+}
+
+function initDefenseSelects(){
+  const gSel=document.getElementById('def-game-sel');
+  gSel.innerHTML='<option value="0">🏆 全隊累積</option>'+Object.entries(GAME_LABELS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
+  const pSel=document.getElementById('def-player-sel');
+  const players=buildDefensePlayerList();
+  pSel.innerHTML='<option value="0">🏆 全隊累積</option>'+players.map(p=>`<option value="${p.no}">#${p.no} ${p.name}</option>`).join('');
+}
+
+function switchDefViewMode(mode){
+  document.getElementById('def-game-ctrl').style.display=mode==='game'?'flex':'none';
+  document.getElementById('def-player-ctrl').style.display=mode==='player'?'flex':'none';
+  renderDefense();
+}
+
+// ===== TAB 7: 守備統計 =====
+let DEF_STATS_DATA = [];
+let DEF_STATS_FILTERED = [];
+
+try{
+  const saved = localStorage.getItem('u10_def_stats');
+  if(saved) DEF_STATS_DATA = JSON.parse(saved);
+}catch(e){}
+
+const DEF_STAT_KEYS = ['tc','po','a','e','fpct','go','dp','fo','fo_in','fc','sf','sac','e_out','e_in'];
+
+function renderDefStats(){
+  const noData = document.getElementById('defstats-no-data');
+  const wrap = document.getElementById('defstats-wrap');
+  if(!DEF_STATS_DATA.length){
+    noData.style.display='block'; wrap.style.display='none'; return;
+  }
+  noData.style.display='none'; wrap.style.display='block';
+  DEF_STATS_FILTERED = [...DEF_STATS_DATA];
+  renderDefStatsTable(DEF_STATS_FILTERED);
+}
+
+function renderDefStatsTable(data){
+  const tbody = document.getElementById('defstats-tbody');
+  if(!tbody) return;
+  tbody.innerHTML = '';
+  data.forEach((p,i)=>{
+    const fpct = (p.tc>0) ? ((p.po+p.a)/p.tc).toFixed(3) : (p.fpct!=null?p.fpct.toFixed(3):'---');
+    const bg = i%2===0?'#f8fafd':'#fff';
+    const eStyle = (p.e>0)?'color:#c0392b;font-weight:700;':'';
+    const fpctStyle = (p.tc>0&&((p.po+p.a)/p.tc)>=1)?'color:#27ae60;font-weight:700;':(p.e>0?'color:#c0392b;':'' );
+    tbody.innerHTML += `<tr style="background:${bg};">
+      <td style="font-weight:700;color:#34495e;">#${p.no}</td>
+      <td style="font-weight:600;">${p.name}</td>
+      <td>${p.tc??'---'}</td>
+      <td>${p.po??'---'}</td>
+      <td>${p.a??'---'}</td>
+      <td style="${eStyle}">${p.e??'---'}</td>
+      <td style="${fpctStyle}">${fpct}</td>
+      <td style="border-left:2px solid #dde3ea;">${p.go??'---'}</td>
+      <td>${p.dp??'---'}</td>
+      <td>${p.fo??'---'}</td>
+      <td>${p.fo_in??'---'}</td>
+      <td style="border-left:2px solid #dde3ea;">${p.fc??'---'}</td>
+      <td>${p.sf??'---'}</td>
+      <td>${p.sac??'---'}</td>
+      <td style="border-left:2px solid #dde3ea;${p.e_out>0?'color:#c0392b;font-weight:700;':''}">${p.e_out??'---'}</td>
+      <td style="${p.e_in>0?'color:#c0392b;font-weight:700;':''}">${p.e_in??'---'}</td>
+    </tr>`;
+  });
+}
+
+function filterDefStats(){
+  const q = document.getElementById('defstats-search').value.trim();
+  const filtered = q ? DEF_STATS_DATA.filter(p=>p.name.includes(q)||String(p.no).includes(q)) : DEF_STATS_DATA;
+  renderDefStatsTable(filtered);
+}
+
+function resetDefStats(){
+  if(!confirm('確定要清除所有守備統計數據嗎？')) return;
+  DEF_STATS_DATA = [];
+  localStorage.removeItem('u10_def_stats');
+  renderDefStats();
+}
+
+function saveDefStatsDefault(){
+  try{
+    localStorage.setItem('u10_def_stats', JSON.stringify(DEF_STATS_DATA));
+    alert('✅ 守備數據已儲存為預設！');
+  }catch(e){ alert('儲存失敗：'+e.message); }
+}
+
+// 下載守備範本（新格式：橫式局次展開）
+function downloadDefTemplate(){
+  const wb = XLSX.utils.book_new();
+  const maxIn = 5; // 預設 5 局
+  // 第一行：群組標題
+  const row1 = ['','','','',''];
+  ['守備內容','守備球員-背號','守備球員-姓名','守備球員-區域'].forEach(label=>{
+    row1.push(label);
+    for(let i=1;i<maxIn;i++) row1.push('');
+  });
+  // 第二行：子欄位標題
+  const row2 = ['賽程','場次','出賽球隊','對戰球隊','打序'];
+  for(let g=0;g<4;g++) for(let i=1;i<=maxIn;i++) row2.push(i+'局');
+  // 範例資料列（9棒打序）
+  const rows = [row1, row2];
+  for(let seq=1;seq<=9;seq++){
+    const row = ['2025/05/10', 1, 'U10', '對手隊', seq];
+    for(let g=0;g<4;g++) for(let i=0;i<maxIn;i++) row.push('');
+    rows.push(row);
+  }
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  // 欄寬
+  ws['!cols'] = [{wch:12},{wch:6},{wch:10},{wch:10},{wch:6}];
+  for(let g=0;g<4;g++) for(let i=0;i<maxIn;i++) ws['!cols'].push({wch:g===0||g===3?12:8});
+  // 合併群組標題
+  ws['!merges'] = [
+    {s:{r:0,c:5}, e:{r:0,c:5+maxIn-1}},
+    {s:{r:0,c:5+maxIn}, e:{r:0,c:5+maxIn*2-1}},
+    {s:{r:0,c:5+maxIn*2}, e:{r:0,c:5+maxIn*3-1}},
+    {s:{r:0,c:5+maxIn*3}, e:{r:0,c:5+maxIn*4-1}}
+  ];
+  XLSX.utils.book_append_sheet(wb, ws, '守備記錄');
+  // 說明工作表
+  const note = XLSX.utils.aoa_to_sheet([
+    ['欄位說明'],
+    ['賽程','比賽日期或名稱，例如 2025/05/10'],
+    ['場次','場次編號（數字）'],
+    ['出賽球隊','出賽隊名'],
+    ['對戰球隊','對手隊名'],
+    ['打序','該行代表第幾棒（1~9）'],
+    ['守備內容','該局守備動作代碼（見下方）'],
+    ['','GO = 滾地出局（Ground Out）'],
+    ['','FO = 飛球出局（Fly Out）'],
+    ['','FO_內 = 內野高飛球'],
+    ['','FC = 野手選擇（Fielder Choice）'],
+    ['','DP = 雙殺（Double Play）'],
+    ['','SF = 犧牲飛球（Sacrifice Fly）'],
+    ['','SAC = 犧牲觸擊（Sacrifice Bunt）'],
+    ['','E_內 = 內野失誤'],
+    ['','E_外 = 外野失誤'],
+    ['守備球員-背號','各局守備球員背號（同打序不同局可換人）'],
+    ['守備球員-姓名','各局守備球員姓名'],
+    ['守備球員-區域','守備位置，如 P/C/1B/2B/3B/SS/LF/CF/RF'],
+    ['注意','守備內容若含「E」開頭視為失誤（isError=true）']
+  ]);
+  XLSX.utils.book_append_sheet(wb, note, '欄位說明');
+  XLSX.writeFile(wb, 'U10守備記錄範本.xlsx');
+}
+
+// 守備 Excel 上傳
+function handleDefFileUpload(e){
+  const file = e.target.files[0]; if(!file) return;
+  document.getElementById('def-file-chosen').style.display='block';
+  document.getElementById('def-file-chosen').textContent='📄 已選擇：'+file.name;
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    try{
+      const wb = XLSX.read(ev.target.result,{type:'binary'});
+      const sn = wb.SheetNames.find(n=>n.includes('守備'))||wb.SheetNames[0];
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:''});
+      parseDefData(rows, file.name);
+    }catch(err){
+      document.getElementById('def-preview-area').innerHTML=`<div class="upload-error">❌ 解析失敗：${err.message}</div>`;
+      document.getElementById('def-preview-sec').style.display='block';
+    }
+  };
+  reader.readAsBinaryString(file);
+}
+
+let pendingDefData = null;   // 守備統計（舊格式）
+let pendingDefRecord = null; // 守備記錄（新格式 → DEFENSE_DATA）
+
+// ===== 守備數據解析入口：自動判斷新/舊格式 =====
+function parseDefData(rows, fname){
+  if(rows.length<2){ showDefUploadMsg('error','❌ 資料不足，請確認格式'); return; }
+  // 新格式判斷：掃描前3行，任一行含「賽程」且含「打序」視為新格式
+  const isNew = rows.slice(0,3).some(row=>row&&row.some(c=>String(c||'').trim()==='賽程')&&row.some(c=>String(c||'').trim()==='場次'))
+    || rows.slice(0,3).some(row=>row&&row.some(c=>String(c||'').trim()==='賽程'));
+  if(isNew) parseDefRecordNew(rows, fname);
+  else parseDefStatsOld(rows, fname);
+}
+
+// ===== 新格式：守備記錄（→ DEFENSE_DATA）=====
+function parseDefRecordNew(rows, fname){
+  // Step1: 定位含「賽程」的標題行
+  let headerRowIdx=-1;
+  for(let i=0;i<Math.min(rows.length,5);i++){
+    if(rows[i]&&rows[i].some(c=>String(c||'').trim()==='賽程')){ headerRowIdx=i; break; }
+  }
+  if(headerRowIdx<0){ showDefUploadMsg('error','❌ 找不到「賽程」標題行，請確認格式'); return; }
+
+  const h1=rows[headerRowIdx].map(c=>String(c||'').trim());
+  const h0=headerRowIdx>0?rows[headerRowIdx-1].map(c=>String(c||'').trim()):[];
+
+  // Step2: 從標題行找固定欄
+  const colGame=h1.findIndex(v=>v==='場次');
+  const colOpp =h1.findIndex(v=>v==='對戰球隊'||v==='對隊'||v==='對手');
+  const colSeq =h1.findIndex(v=>v==='打序'||v==='棒序');
+  if(colGame<0||colSeq<0){
+    showDefUploadMsg('error',`❌ 標題行找不到「場次」或「打序」欄。偵測到：${h1.filter(v=>v).join('、')}`);
+    return;
+  }
+
+  // Step3: 找群組欄 — 依序嘗試 h0、h1
+  const grp={content:-1,no:-1,name:-1,area:-1};
+  const scanDef=(arr)=>{
+    arr.forEach((v,i)=>{
+      if(v.includes('守備內容')&&grp.content<0)                    grp.content=i;
+      if(v.includes('背號')&&grp.no<0)                            grp.no=i;
+      if(v.includes('姓名')&&grp.name<0)                          grp.name=i;
+      if((v.includes('區域')||v.includes('位置'))&&grp.area<0)    grp.area=i;
+    });
+  };
+  scanDef(h0);
+  scanDef(h1);
+
+  if(grp.content<0||grp.no<0){
+    const h0p=h0.filter(v=>v).slice(0,10).join('、')||'（空）';
+    const h1p=h1.filter(v=>v).slice(0,10).join('、');
+    showDefUploadMsg('error',
+      `❌ 找不到群組欄。`+
+      `\n偵測：守備內容欄=${grp.content>=0?'第'+(grp.content+1)+'欄':'未找到'}，背號欄=${grp.no>=0?'第'+(grp.no+1)+'欄':'未找到'}`+
+      `\n第${headerRowIdx}行：${h0p}`+
+      `\n第${headerRowIdx+1}行：${h1p}`+
+      `\n→ 請確認 Excel 有「守備內容」與「守備球員-背號」群組標題`);
+    return;
+  }
+
+  // Step4: 找最大局次
+  let maxInn=0;
+  h1.forEach(v=>{ const m=String(v).match(/^(\d+)局$/); if(m) maxInn=Math.max(maxInn,parseInt(m[1])); });
+  if(!maxInn){ showDefUploadMsg('error','❌ 找不到「1局」「2局」等局次欄位，請確認標題行格式'); return; }
+
+  // Step5: 解析資料列
+  const result=[];
+  for(let r=headerRowIdx+1;r<rows.length;r++){
+    const row=rows[r];
+    if(!row||row.every(c=>String(c??'').trim()==='')) continue;
+    const gmRaw=row[colGame]; const gm=parseInt(String(gmRaw??'').trim().replace(/[^0-9]/g,''))||0; // 支援 "#1" 等格式
+    const opponent=colOpp>=0?String(row[colOpp]??'').trim():'';
+    const seq=parseInt(String(row[colSeq]??'').trim())||0;
+    if(!gm) continue;
+    for(let inn=1;inn<=maxInn;inn++){
+      const ct =String(row[grp.content+(inn-1)]??'').trim();
+      const noR=String(row[grp.no+(inn-1)]??'').trim();
+      const nm =grp.name>=0?String(row[grp.name+(inn-1)]??'').trim():'';
+      const pos=grp.area>=0?String(row[grp.area+(inn-1)]??'').trim():'';
+      if(!ct||ct==='-') continue;  // 守備內容為空才跳過；背號可以為空（K/BB無特定野手）
+      const no=(!noR||noR==='-')?null:parseInt(noR)||null; // 背號空白→null（投手動作如K/BB）
+      if(no===null&&!nm) continue; // 背號與姓名皆空白則跳過
+      const isError=ct.toUpperCase().startsWith('E');
+      result.push({game:gm,opponent,seq,inning:inn,no,name:nm||'',pos,isError,content:ct.toUpperCase()});
+    }
+  }
+  if(!result.length){
+    // 列出前3筆資料列的原始值，幫助診斷
+    let rowDiag='';
+    for(let r=headerRowIdx+1;r<Math.min(rows.length,headerRowIdx+4);r++){
+      const row=rows[r]||[];
+      rowDiag+=`\n第${r+1}列 → 場次欄[${colGame+1}]="${row[colGame]??'(空)'}" 打序欄[${colSeq+1}]="${row[colSeq]??'(空)'}" 守備內容欄[${grp.content+1}]="${row[grp.content]??'(空)'}" 背號欄[${grp.no+1}]="${row[grp.no]??'(空)'}"`;
+    }
+    showDefUploadMsg('error',
+      `❌ 未解析到有效守備記錄。`+
+      `\n偵測：標題第${headerRowIdx+1}列，場次欄=第${colGame+1}欄，守備內容=第${grp.content+1}欄，背號=第${grp.no+1}欄，${maxInn}局`+
+      `\n【前3列原始值】${rowDiag}`);
+    return;
+  }
+  pendingDefRecord = result;
+  // 預覽
+  const gmSet=[...new Set(result.map(d=>d.game))].sort((a,b)=>a-b);
+  let html=`<div class="preview-info">✅ 解析成功「${fname}」— 共 <strong>${result.length}</strong> 筆守備記錄，涵蓋 <strong>${gmSet.length}</strong> 場（新格式 → 守備記錄）</div>`;
+  html+='<div class="preview-wrap"><table class="preview-table"><thead><tr><th>場次</th><th>對手</th><th>打序</th><th>局次</th><th>背號</th><th>姓名</th><th>守備內容</th><th>守備位置</th><th>失誤</th></tr></thead><tbody>';
+  [...result].slice(0,50).forEach(d=>{
+    const errStyle=d.isError?'color:#c0392b;font-weight:700;':'';
+    html+=`<tr><td>#${d.game}</td><td>${d.opponent}</td><td>第${d.seq}棒</td><td>第${d.inning}局</td><td>#${d.no}</td><td>${d.name}</td><td style="${errStyle}">${d.content}</td><td>${d.pos}</td><td>${d.isError?'❗ 是':'—'}</td></tr>`;
+  });
+  if(result.length>50) html+=`<tr><td colspan="9" style="color:#999;font-style:italic;">...（僅顯示前50筆，共 ${result.length} 筆）</td></tr>`;
+  html+='</tbody></table></div>';
+  document.getElementById('def-preview-area').innerHTML=html;
+  document.getElementById('def-preview-sec').style.display='block';
+  document.getElementById('def-apply-success').style.display='none';
+}
+
+// ===== 舊格式：守備統計（→ DEF_STATS_DATA）=====
+function parseDefStatsOld(rows, fname){
+  const header = rows[0].map(h=>String(h).trim());
+  const CM = {'背號':'no','姓名':'name','TC':'tc','PO':'po','A':'a','E':'e','FPCT':'fpct',
+    'GO':'go','DP':'dp','FO':'fo','FO_內':'fo_in','FC':'fc','SF':'sf','SAC':'sac','E_外':'e_out','E_內':'e_in'};
+  const ci = {};
+  header.forEach((h,i)=>{ if(CM[h]) ci[CM[h]]=i; });
+  if(ci.no===undefined||ci.name===undefined){ showDefUploadMsg('error','❌ 缺少「背號」或「姓名」欄位'); return; }
+  const getN=(row,key)=>{ const v=row[ci[key]]; return(v!==undefined&&v!=='')?(parseFloat(v)||0):null; };
+  const result = [];
+  for(let r=1;r<rows.length;r++){
+    if(!rows[r]||rows[r][ci.no]===undefined||rows[r][ci.no]==='') continue;
+    const no = parseInt(rows[r][ci.no]); const name = String(rows[r][ci.name]||'');
+    if(isNaN(no)) continue;
+    const po=getN(rows[r],'po')??0, a=getN(rows[r],'a')??0, e=getN(rows[r],'e')??0;
+    const tcRaw=getN(rows[r],'tc'); const tc = tcRaw!=null ? tcRaw : po+a+e;
+    const fpct = tc>0?(po+a)/tc:1;
+    result.push({no,name,tc,po,a,e,fpct,
+      go:getN(rows[r],'go'), dp:getN(rows[r],'dp'), fo:getN(rows[r],'fo'),
+      fo_in:getN(rows[r],'fo_in'), fc:getN(rows[r],'fc'), sf:getN(rows[r],'sf'),
+      sac:getN(rows[r],'sac'), e_out:getN(rows[r],'e_out'), e_in:getN(rows[r],'e_in')});
+  }
+  pendingDefData = result.sort((a,b)=>a.no-b.no);
+  let html = `<div class="preview-info">✅ 解析成功「${fname}」— 共 <strong>${result.length}</strong> 位球員（舊格式 → 守備統計）</div>`;
+  html += '<div class="preview-wrap"><table class="preview-table"><thead><tr><th>背號</th><th>姓名</th><th>TC</th><th>PO</th><th>A</th><th>E</th><th>FPCT</th><th>GO</th><th>DP</th><th>FO</th><th>FO_內</th><th>FC</th><th>SF</th><th>SAC</th><th>E_外</th><th>E_內</th></tr></thead><tbody>';
+  result.forEach(p=>{
+    const fp = p.tc>0?((p.po+p.a)/p.tc).toFixed(3):'---';
+    html+=`<tr><td>#${p.no}</td><td>${p.name}</td><td>${p.tc??'---'}</td><td>${p.po??'---'}</td><td>${p.a??'---'}</td><td>${p.e??'---'}</td><td>${fp}</td><td>${p.go??'---'}</td><td>${p.dp??'---'}</td><td>${p.fo??'---'}</td><td>${p.fo_in??'---'}</td><td>${p.fc??'---'}</td><td>${p.sf??'---'}</td><td>${p.sac??'---'}</td><td>${p.e_out??'---'}</td><td>${p.e_in??'---'}</td></tr>`;
+  });
+  html += '</tbody></table></div>';
+  document.getElementById('def-preview-area').innerHTML = html;
+  document.getElementById('def-preview-sec').style.display = 'block';
+  document.getElementById('def-apply-success').style.display = 'none';
+}
+
+function showDefUploadMsg(type, msg){
+  document.getElementById('def-preview-area').innerHTML=`<div class="${type==='error'?'upload-error':'preview-info'}">${msg}</div>`;
+  document.getElementById('def-preview-sec').style.display='block';
+}
+
+function applyDefData(){
+  // 新格式：更新 DEFENSE_DATA
+  if(pendingDefRecord){
+    DEFENSE_DATA.length=0;
+    pendingDefRecord.forEach(d=>DEFENSE_DATA.push({...d}));
+    // 同步更新 GAME_LABELS（完整覆寫）
+    Object.keys(GAME_LABELS).forEach(k=>delete GAME_LABELS[k]);
+    const gmSet=[...new Set(DEFENSE_DATA.map(d=>d.game))].sort((a,b)=>a-b);
+    gmSet.forEach(g=>{ GAME_LABELS[g]=`第${g}場 vs ${DEFENSE_DATA.find(d=>d.game===g)?.opponent||'對手'}`; });
+    // 清除守備相關圖表快取
+    Object.keys(charts).filter(id=>id.startsWith('chart-def')).forEach(id=>{
+      if(charts[id]){charts[id].dispose();delete charts[id];}
+    });
+    initDefenseSelects();
+    renderDefense();
+    renderDefRanking();
+    renderDefAwards();
+    const sm = document.getElementById('def-apply-success');
+    sm.style.display='block';
+    setTimeout(()=>{ sm.style.display='none';
+      document.querySelectorAll('nav button')[6].click(); }, 1200);
+    return;
+  }
+  // 舊格式：更新 DEF_STATS_DATA
+  if(!pendingDefData) return;
+  DEF_STATS_DATA = pendingDefData;
+  localStorage.setItem('u10_def_stats', JSON.stringify(DEF_STATS_DATA));
+  const sm = document.getElementById('def-apply-success');
+  sm.style.display='block';
+  setTimeout(()=>{ sm.style.display='none'; renderDefStats();
+    document.querySelectorAll('nav button')[6].click(); }, 1200);
+}
+
+function saveDefDefault(){
+  try{
+    localStorage.setItem('u10_def_default_defense', JSON.stringify(DEFENSE_DATA));
+    alert('💾 守備預設數據已儲存！');
+  }catch(e){alert('儲存失敗：'+e.message);}
+}
+function clearDefData(){
+  // 優先從 localStorage 讀取最後一次「更新預設守備數據」的快照，無則還原 HTML 初始內建值
+  try{
+    const ls=localStorage.getItem('u10_def_default_defense');
+    const src=ls?JSON.parse(ls):DEFAULT_DEFENSE_DATA;
+    DEFENSE_DATA.length=0;
+    src.forEach(d=>DEFENSE_DATA.push(JSON.parse(JSON.stringify(d))));
+  }catch(e){
+    DEFENSE_DATA.length=0;
+    DEFAULT_DEFENSE_DATA.forEach(d=>DEFENSE_DATA.push(JSON.parse(JSON.stringify(d))));
+  }
+  // 同步還原 GAME_LABELS（根據還原後的 DEFENSE_DATA 重建）
+  Object.keys(GAME_LABELS).forEach(k=>delete GAME_LABELS[k]);
+  const gmSet=[...new Set(DEFENSE_DATA.map(d=>d.game))].sort((a,b)=>a-b);
+  gmSet.forEach(g=>{ GAME_LABELS[g]=`第${g}場 vs ${DEFENSE_DATA.find(d=>d.game===g)?.opponent||'對手'}`; });
+  // 重刷所有守備相關頁籤
+  Object.keys(charts).filter(id=>id.startsWith('chart-def')).forEach(id=>{
+    if(charts[id]){charts[id].dispose();delete charts[id];}
+  });
+  initDefenseSelects();
+  renderDefense();
+  renderDefRanking();
+  renderDefAwards();
+  // 收起預覽區
+  pendingDefData=null;
+  pendingDefRecord=null;
+  document.getElementById('def-preview-sec').style.display='none';
+  document.getElementById('def-file-chosen').textContent='';
+  document.querySelectorAll('nav button')[6].click();
+}
+
+// 設定守備上傳拖放
+document.addEventListener('DOMContentLoaded',()=>{
+  const zone = document.getElementById('def-drop-zone');
+  if(zone){
+    zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('drag-over');});
+    zone.addEventListener('dragleave',()=>zone.classList.remove('drag-over'));
+    zone.addEventListener('drop',e=>{
+      e.preventDefault();zone.classList.remove('drag-over');
+      const file=e.dataTransfer.files[0];
+      if(file) handleDefFileUpload({target:{files:[file]}});
+    });
+  }
+  if(DEF_STATS_DATA.length) renderDefStats();
+});
+
+// ===== TAB 8: 守備排行榜 =====
+function buildDefRankStats(){
+  const map={};
+  DEFENSE_DATA.forEach(d=>{
+    if(!map[d.no]) map[d.no]={no:d.no,name:d.name,total:0,errors:0,go:0,dp:0,fo:0,fo_in:0,fc:0,sf:0,sac:0,e_out:0,e_in:0};
+    const p=map[d.no];
+    p.total++;
+    if(d.isError) p.errors++;
+    if(d.content==='GO') p.go++;
+    else if(d.content==='DP') p.dp++;
+    else if(d.content==='FO') p.fo++;
+    else if(d.content==='FO_內') p.fo_in++;
+    else if(d.content==='FC') p.fc++;
+    else if(d.content==='SF') p.sf++;
+    else if(d.content==='SAC') p.sac++;
+    else if(d.content==='E') p.e_out++;
+    else if(d.content==='E_內') p.e_in++;
+  });
+  return Object.values(map).map(p=>({...p,
+    outs: p.go+p.dp+p.fo+p.fo_in+p.fc+p.sf+p.sac,
+    fpct: p.total>0 ? (p.total-p.errors)/p.total : null
+  }));
+}
+
+function renderDefRanking(){
+  const players=buildDefRankStats();
+  const totalPlayers=players.length;
+  const totalDef=players.reduce((s,p)=>s+p.total,0);
+  const totalErr=players.reduce((s,p)=>s+p.errors,0);
+  const teamFpct=totalDef>0?((totalDef-totalErr)/totalDef):0;
+
+  // ── 摘要數據卡 ──
+  document.getElementById('defrank-summary-cards').innerHTML=[
+    `<div class="defrank-card"><div class="dr-label">有守備記錄球員</div><div class="dr-val">${totalPlayers} 人</div></div>`,
+    `<div class="defrank-card"><div class="dr-label">全隊守備次數</div><div class="dr-val">${totalDef} 次</div></div>`,
+    `<div class="defrank-card" style="border-top:3px solid #c0392b;"><div class="dr-label">全隊守備失誤</div><div class="dr-val" style="color:#c0392b;">${totalErr} 次</div></div>`,
+    `<div class="defrank-card" style="border-top:3px solid #1a7f5a;"><div class="dr-label">全隊整體守備率</div><div class="dr-val" style="color:#1a7f5a;">${teamFpct.toFixed(3)}</div></div>`
+  ].join('');
+
+  function rankCls(i){return i===0?'r1':i===1?'r2':i===2?'r3':'';}
+  function rankLabel(i){return i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}`;}  
+
+  // ── 守備次數排行 ──
+  const byTotal=[...players].sort((a,b)=>b.total-a.total||a.no-b.no);
+  document.getElementById('dr-total-tbody').innerHTML=byTotal.map((p,i)=>
+    `<tr><td class="rank-no ${rankCls(i)}">${rankLabel(i)}</td><td>#${p.no}</td><td class="pname">${p.name}</td><td class="val-hi">${p.total}</td><td>${p.outs}</td></tr>`
+  ).join('');
+
+  // ── 出局貢獻排行 ──
+  const byOuts=[...players].sort((a,b)=>b.outs-a.outs||a.no-b.no);
+  document.getElementById('dr-outs-tbody').innerHTML=byOuts.map((p,i)=>
+    `<tr><td class="rank-no ${rankCls(i)}">${rankLabel(i)}</td><td>#${p.no}</td><td class="pname">${p.name}</td><td class="val-hi">${p.outs}</td><td>${p.go}</td><td>${p.fo+p.fo_in}</td><td>${p.fc}</td></tr>`
+  ).join('');
+
+  // ── 守備率排行 ──
+  const byFpct=[...players].sort((a,b)=>(b.fpct??0)-(a.fpct??0)||b.total-a.total||a.no-b.no);
+  document.getElementById('dr-fpct-tbody').innerHTML=byFpct.map((p,i)=>{
+    const fp=p.fpct!==null?p.fpct.toFixed(3):'---';
+    const cls=p.errors===0?'val-hi':p.errors>2?'val-err':'';
+    return `<tr><td class="rank-no ${rankCls(i)}">${rankLabel(i)}</td><td>#${p.no}</td><td class="pname">${p.name}</td><td class="${cls}">${fp}</td><td>${p.total}</td><td>${p.errors>0?'<span class="val-err">'+p.errors+'</span>':0}</td></tr>`;
+  }).join('');
+
+  // ── 失誤次數排行（只顯示有失誤者；若全0則顯示提示）──
+  const withErr=[...players].filter(p=>p.errors>0).sort((a,b)=>b.errors-a.errors||a.no-b.no);
+  document.getElementById('dr-err-tbody').innerHTML=withErr.length
+    ? withErr.map((p,i)=>
+        `<tr><td class="rank-no ${rankCls(i)}">${rankLabel(i)}</td><td>#${p.no}</td><td class="pname">${p.name}</td><td class="val-err">${p.errors}</td><td>${p.e_in}</td><td>${p.e_out}</td></tr>`
+      ).join('')
+    : '<tr><td colspan="6" style="color:#27ae60;padding:14px;font-weight:600;">🎉 本季無守備失誤！</td></tr>';
+
+  // ── 圖表：出局貢獻分布（橫條堆疊）── 由多到少，最多者顯示於最上方
+  const chartOuts=getChart('chart-defrank-outs');
+  // 由少到多排序後反轉 → ECharts category 軸從下往上，反轉後最多的出現在最上方
+  const sortedOuts=[...players].sort((a,b)=>a.outs-b.outs||b.no-a.no);
+  const names=sortedOuts.map(p=>`#${p.no} ${p.name}`);
+  chartOuts.setOption({
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+    legend:{top:0,data:['GO','FO(外)','FO(內)','FC','DP'],textStyle:{fontSize:11}},
+    grid:{left:'22%',right:'5%',top:36,bottom:10},
+    xAxis:{type:'value',minInterval:1},
+    yAxis:{type:'category',data:names,axisLabel:{fontSize:11}},
+    series:[
+      {name:'GO',type:'bar',stack:'s',data:sortedOuts.map(p=>p.go),itemStyle:{color:'#27ae60'},label:{show:true,formatter:v=>v.value>0?v.value:''}},
+      {name:'FO(外)',type:'bar',stack:'s',data:sortedOuts.map(p=>p.fo),itemStyle:{color:'#2ecc71'},label:{show:true,formatter:v=>v.value>0?v.value:''}},
+      {name:'FO(內)',type:'bar',stack:'s',data:sortedOuts.map(p=>p.fo_in),itemStyle:{color:'#a9dfbf'},label:{show:true,formatter:v=>v.value>0?v.value:''}},
+      {name:'FC',type:'bar',stack:'s',data:sortedOuts.map(p=>p.fc),itemStyle:{color:'#1a7f5a'},label:{show:true,formatter:v=>v.value>0?v.value:''}},
+      {name:'DP',type:'bar',stack:'s',data:sortedOuts.map(p=>p.dp),itemStyle:{color:'#0f5a3e'},label:{show:true,formatter:v=>v.value>0?v.value:''}}
+    ]
+  });
+
+  // ── 圖表：守備率 FPCT 柱狀 ──
+  const chartFpct=getChart('chart-defrank-fpct');
+  const sortedFpct=[...players].sort((a,b)=>(b.fpct??0)-(a.fpct??0));
+  chartFpct.setOption({
+    tooltip:{trigger:'axis',formatter:p=>`${p[0].name}<br/>FPCT: ${Number(p[0].value).toFixed(3)}   守備次數: ${sortedFpct[p[0].dataIndex].total}   失誤: ${sortedFpct[p[0].dataIndex].errors}`},
+    xAxis:{type:'category',data:sortedFpct.map(p=>`#${p.no} ${p.name}`),axisLabel:{fontSize:10,rotate:20}},
+    yAxis:{type:'value',name:'FPCT',min:0,max:1.05,axisLabel:{formatter:v=>v.toFixed(2)}},
+    series:[{
+      type:'bar',
+      data:sortedFpct.map(p=>({value:p.fpct??0, itemStyle:{color:p.errors===0?'#1a7f5a':p.errors>2?'#c0392b':'#e67e22'}})),
+      label:{show:true,position:'top',formatter:p=>Number(p.value).toFixed(3),fontSize:11}
+    },{
+      type:'line',data:sortedFpct.map(()=>1),lineStyle:{color:'#005087',type:'dashed',width:1.5},
+      symbol:'none',tooltip:{show:false}
+    }]
+  });
+
+  // ── 詳細總表（依守備率 FPCT 由大到小；同值者守備次數多者優先）──
+  const sortedDetail=[...players].sort((a,b)=>(b.fpct??0)-(a.fpct??0)||b.total-a.total||a.no-b.no);
+  document.getElementById('defrank-detail-tbody').innerHTML=sortedDetail.map((p,i)=>{
+    const fp=p.fpct!==null?p.fpct.toFixed(3):'---';
+    const errStyle=p.errors>0?'color:#c0392b;font-weight:700;':'';
+    const fpctStyle=p.errors===0?'color:#27ae60;font-weight:700;':(p.errors>2?'color:#c0392b;font-weight:700;':'');
+    const bg=i%2===0?'#faf7fd':'#fff';
+    return `<tr style="background:${bg};">
+      <td class="sticky-left" style="font-weight:700;color:#34495e;">#${p.no}</td>
+      <td class="sticky-left">${p.name}</td>
+      <td>${p.total}</td>
+      <td style="${fpctStyle}">${fp}</td>
+      <td style="${errStyle}">${p.errors||0}</td>
+      <td>${p.go||0}</td>
+      <td>${p.fo||0}</td>
+      <td>${p.fo_in||0}</td>
+      <td>${p.fc||0}</td>
+      <td>${p.dp||0}</td>
+      <td style="${errStyle}">${p.e_out||0}</td>
+      <td style="${errStyle}">${p.e_in||0}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ===== TAB: 打擊記錄 =====
+const BATTING_DATA = [
+  // 場次1 vs YM忍者
+  {game:1,opponent:'YM忍者',seq:1,inning:1,no:64,name:'黃晨睿',content:'E_內',rbi:0,r:1},
+  {game:1,opponent:'YM忍者',seq:1,inning:2,no:64,name:'黃晨睿',content:'BB',rbi:0,r:1},
+  {game:1,opponent:'YM忍者',seq:1,inning:3,no:64,name:'黃晨睿',content:'FO',rbi:0,r:0},
+  {game:1,opponent:'YM忍者',seq:2,inning:1,no:98,name:'朱彥宇',content:'GO',rbi:1,r:0},
+  {game:1,opponent:'YM忍者',seq:2,inning:2,no:98,name:'朱彥宇',content:'2B',rbi:0,r:1},
+  {game:1,opponent:'YM忍者',seq:2,inning:3,no:98,name:'朱彥宇',content:'1B',rbi:0,r:1},
+  {game:1,opponent:'YM忍者',seq:3,inning:1,no:9,name:'蕭沛庭',content:'1B',rbi:0,r:1},
+  {game:1,opponent:'YM忍者',seq:3,inning:2,no:9,name:'蕭沛庭',content:'HR_內',rbi:1,r:1},
+  {game:1,opponent:'YM忍者',seq:3,inning:3,no:9,name:'蕭沛庭',content:'BB',rbi:0,r:1},
+  {game:1,opponent:'YM忍者',seq:4,inning:1,no:34,name:'劉禹樂',content:'HR_內',rbi:2,r:1},
+  {game:1,opponent:'YM忍者',seq:4,inning:2,no:34,name:'劉禹樂',content:'FO',rbi:0,r:0},
+  {game:1,opponent:'YM忍者',seq:4,inning:3,no:34,name:'劉禹樂',content:'BB',rbi:0,r:1},
+  {game:1,opponent:'YM忍者',seq:5,inning:1,no:82,name:'鄞圻睿',content:'1B',rbi:0,r:1},
+  {game:1,opponent:'YM忍者',seq:5,inning:2,no:82,name:'鄞圻睿',content:'GO',rbi:0,r:0},
+  {game:1,opponent:'YM忍者',seq:5,inning:3,no:82,name:'鄞圻睿',content:'BB',rbi:0,r:1},
+  {game:1,opponent:'YM忍者',seq:6,inning:1,no:15,name:'陳冠安',content:'3B',rbi:1,r:0},
+  {game:1,opponent:'YM忍者',seq:6,inning:3,no:15,name:'陳冠安',content:'K',rbi:0,r:1},
+  {game:1,opponent:'YM忍者',seq:6,inning:4,no:15,name:'陳冠安',content:'BB',rbi:0,r:1},
+  {game:1,opponent:'YM忍者',seq:7,inning:1,no:72,name:'張世昀',content:'E_內',rbi:1,r:0},
+  {game:1,opponent:'YM忍者',seq:7,inning:3,no:72,name:'張世昀',content:'GO',rbi:0,r:0},
+  {game:1,opponent:'YM忍者',seq:7,inning:4,no:77,name:'林承熙',content:'K',rbi:0,r:0},
+  {game:1,opponent:'YM忍者',seq:8,inning:1,no:39,name:'黃宇謙',content:'FC',rbi:0,r:0},
+  {game:1,opponent:'YM忍者',seq:8,inning:3,no:39,name:'黃宇謙',content:'2B',rbi:0,r:0},
+  {game:1,opponent:'YM忍者',seq:8,inning:4,no:26,name:'莊閔程',content:'K',rbi:0,r:0},
+  {game:1,opponent:'YM忍者',seq:9,inning:2,no:99,name:'張郁晨',content:'GO',rbi:0,r:0},
+  {game:1,opponent:'YM忍者',seq:9,inning:3,no:99,name:'張郁晨',content:'GO',rbi:0,r:0},
+  // 場次2 vs 上智隼鷹
+  {game:2,opponent:'上智隼鷹',seq:1,inning:1,no:8,name:'何天浩',content:'K',rbi:0,r:0},
+  {game:2,opponent:'上智隼鷹',seq:1,inning:2,no:8,name:'何天浩',content:'1B',rbi:0,r:1},
+  {game:2,opponent:'上智隼鷹',seq:1,inning:3,no:8,name:'何天浩',content:'3B',rbi:0,r:1},
+  {game:2,opponent:'上智隼鷹',seq:2,inning:1,no:98,name:'朱彥宇',content:'E_內',rbi:0,r:1},
+  {game:2,opponent:'上智隼鷹',seq:2,inning:2,no:98,name:'朱彥宇',content:'2B',rbi:2,r:1},
+  {game:2,opponent:'上智隼鷹',seq:2,inning:3,no:98,name:'朱彥宇',content:'1B',rbi:0,r:1},
+  {game:2,opponent:'上智隼鷹',seq:3,inning:1,no:9,name:'蕭沛庭',content:'BB',rbi:0,r:1},
+  {game:2,opponent:'上智隼鷹',seq:3,inning:2,no:9,name:'蕭沛庭',content:'HR_內',rbi:1,r:1},
+  {game:2,opponent:'上智隼鷹',seq:3,inning:3,no:9,name:'蕭沛庭',content:'1B',rbi:0,r:1},
+  {game:2,opponent:'上智隼鷹',seq:4,inning:1,no:34,name:'劉禹樂',content:'K',rbi:0,r:1},
+  {game:2,opponent:'上智隼鷹',seq:4,inning:2,no:34,name:'劉禹樂',content:'GO',rbi:0,r:0},
+  {game:2,opponent:'上智隼鷹',seq:4,inning:3,no:35,name:'林賴奇',content:'1B',rbi:1,r:1},
+  {game:2,opponent:'上智隼鷹',seq:5,inning:1,no:82,name:'鄞圻睿',content:'GO',rbi:1,r:0},
+  {game:2,opponent:'上智隼鷹',seq:5,inning:3,no:82,name:'鄞圻睿',content:'1B',rbi:0,r:0},
+  {game:2,opponent:'上智隼鷹',seq:5,inning:4,no:82,name:'鄞圻睿',content:'1B',rbi:1,r:0},
+  {game:2,opponent:'上智隼鷹',seq:6,inning:1,no:15,name:'陳冠安',content:'K',rbi:0,r:0},
+  {game:2,opponent:'上智隼鷹',seq:6,inning:3,no:15,name:'陳冠安',content:'FO_內',rbi:0,r:0},
+  {game:2,opponent:'上智隼鷹',seq:7,inning:2,no:77,name:'林承熙',content:'BB',rbi:0,r:0},
+  {game:2,opponent:'上智隼鷹',seq:7,inning:3,no:77,name:'林承熙',content:'GO',rbi:0,r:0},
+  {game:2,opponent:'上智隼鷹',seq:8,inning:2,no:72,name:'張世昀',content:'K',rbi:0,r:0},
+  {game:2,opponent:'上智隼鷹',seq:8,inning:3,no:72,name:'張世昀',content:'K',rbi:0,r:0},
+  {game:2,opponent:'上智隼鷹',seq:9,inning:2,no:99,name:'張郁晨',content:'K',rbi:0,r:1},
+  {game:2,opponent:'上智隼鷹',seq:9,inning:4,no:26,name:'莊閔程',content:'K',rbi:0,r:0},
+  // 場次3 vs 竹北雷爵B
+  {game:3,opponent:'竹北雷爵B',seq:1,inning:1,no:64,name:'黃晨睿',content:'BB',rbi:0,r:0},
+  {game:3,opponent:'竹北雷爵B',seq:1,inning:2,no:64,name:'黃晨睿',content:'BB',rbi:0,r:1},
+  {game:3,opponent:'竹北雷爵B',seq:1,inning:3,no:64,name:'黃晨睿',content:'HR_內',rbi:2,r:1},
+  {game:3,opponent:'竹北雷爵B',seq:2,inning:1,no:98,name:'朱彥宇',content:'FC',rbi:0,r:1},
+  {game:3,opponent:'竹北雷爵B',seq:2,inning:2,no:98,name:'朱彥宇',content:'HR_內',rbi:3,r:1},
+  {game:3,opponent:'竹北雷爵B',seq:2,inning:3,no:98,name:'朱彥宇',content:'E_內',rbi:0,r:1},
+  {game:3,opponent:'竹北雷爵B',seq:3,inning:1,no:9,name:'蕭沛庭',content:'3B',rbi:0,r:1},
+  {game:3,opponent:'竹北雷爵B',seq:3,inning:2,no:9,name:'蕭沛庭',content:'K',rbi:0,r:0},
+  {game:3,opponent:'竹北雷爵B',seq:3,inning:3,no:9,name:'蕭沛庭',content:'BB',rbi:0,r:1},
+  {game:3,opponent:'竹北雷爵B',seq:4,inning:1,no:50,name:'陳昱瑄',content:'1B',rbi:1,r:1},
+  {game:3,opponent:'竹北雷爵B',seq:4,inning:2,no:50,name:'陳昱瑄',content:'FO_內',rbi:0,r:0},
+  {game:3,opponent:'竹北雷爵B',seq:4,inning:3,no:50,name:'陳昱瑄',content:'HR_內',rbi:2,r:1},
+  {game:3,opponent:'竹北雷爵B',seq:5,inning:1,no:42,name:'林守柏',content:'BB',rbi:0,r:0},
+  {game:3,opponent:'竹北雷爵B',seq:5,inning:2,no:42,name:'林守柏',content:'1B',rbi:0,r:0},
+  {game:3,opponent:'竹北雷爵B',seq:5,inning:3,no:35,name:'林賴奇',content:'HP',rbi:0,r:0},
+  {game:3,opponent:'竹北雷爵B',seq:6,inning:1,no:81,name:'陳柏呈',content:'K',rbi:0,r:0},
+  {game:3,opponent:'竹北雷爵B',seq:6,inning:2,no:81,name:'陳柏呈',content:'FO_內',rbi:0,r:0},
+  {game:3,opponent:'竹北雷爵B',seq:7,inning:1,no:15,name:'陳冠安',content:'BB',rbi:0,r:0},
+  {game:3,opponent:'竹北雷爵B',seq:7,inning:3,no:15,name:'陳冠安',content:'FO',rbi:0,r:0},
+  {game:3,opponent:'竹北雷爵B',seq:8,inning:1,no:72,name:'張世昀',content:'K',rbi:0,r:0},
+  {game:3,opponent:'竹北雷爵B',seq:8,inning:3,no:72,name:'張世昀',content:'BB',rbi:0,r:1},
+  {game:3,opponent:'竹北雷爵B',seq:9,inning:2,no:99,name:'張郁晨',content:'BB',rbi:0,r:1},
+  {game:3,opponent:'竹北雷爵B',seq:9,inning:3,no:83,name:'陳俊希',content:'K',rbi:0,r:0},
+  // 場次4 vs 信義飛燕
+  {game:4,opponent:'信義飛燕',seq:1,inning:1,no:64,name:'黃晨睿',content:'1B',rbi:0,r:0},
+  {game:4,opponent:'信義飛燕',seq:1,inning:3,no:64,name:'黃晨睿',content:'GO',rbi:0,r:0},
+  {game:4,opponent:'信義飛燕',seq:2,inning:1,no:98,name:'朱彥宇',content:'FC',rbi:0,r:0},
+  {game:4,opponent:'信義飛燕',seq:2,inning:3,no:98,name:'朱彥宇',content:'FC',rbi:0,r:0},
+  {game:4,opponent:'信義飛燕',seq:3,inning:1,no:9,name:'蕭沛庭',content:'FO',rbi:0,r:0},
+  {game:4,opponent:'信義飛燕',seq:3,inning:3,no:9,name:'蕭沛庭',content:'FC',rbi:0,r:0},
+  {game:4,opponent:'信義飛燕',seq:4,inning:1,no:50,name:'陳昱瑄',content:'GO',rbi:0,r:0},
+  {game:4,opponent:'信義飛燕',seq:4,inning:4,no:26,name:'莊閔程',content:'FO_內',rbi:0,r:0},
+  {game:4,opponent:'信義飛燕',seq:5,inning:2,no:42,name:'林守柏',content:'1B',rbi:0,r:0},
+  {game:4,opponent:'信義飛燕',seq:5,inning:4,no:83,name:'陳俊希',content:'GO',rbi:0,r:0},
+  {game:4,opponent:'信義飛燕',seq:6,inning:2,no:81,name:'陳柏呈',content:'GO',rbi:0,r:0},
+  {game:4,opponent:'信義飛燕',seq:6,inning:4,no:81,name:'陳柏呈',content:'1B_內',rbi:0,r:0},
+  {game:4,opponent:'信義飛燕',seq:7,inning:2,no:15,name:'陳冠安',content:'GO',rbi:0,r:0},
+  {game:4,opponent:'信義飛燕',seq:7,inning:4,no:99,name:'張郁晨',content:'K',rbi:0,r:0},
+  {game:4,opponent:'信義飛燕',seq:8,inning:3,no:77,name:'林承熙',content:'1B',rbi:0,r:0},
+  {game:4,opponent:'信義飛燕',seq:9,inning:3,no:72,name:'張世昀',content:'BB',rbi:0,r:0},
+  // 場次5 vs 竹北雷爵A
+  {game:5,opponent:'竹北雷爵A',seq:1,inning:1,no:64,name:'黃晨睿',content:'BB',rbi:0,r:1},
+  {game:5,opponent:'竹北雷爵A',seq:1,inning:2,no:64,name:'黃晨睿',content:'2B',rbi:0,r:1},
+  {game:5,opponent:'竹北雷爵A',seq:1,inning:3,no:34,name:'劉禹樂',content:'K',rbi:0,r:0},
+  {game:5,opponent:'竹北雷爵A',seq:2,inning:1,no:98,name:'朱彥宇',content:'1B',rbi:0,r:1},
+  {game:5,opponent:'竹北雷爵A',seq:2,inning:2,no:98,name:'朱彥宇',content:'1B',rbi:1,r:0},
+  {game:5,opponent:'竹北雷爵A',seq:3,inning:1,no:9,name:'蕭沛庭',content:'3B',rbi:2,r:1},
+  {game:5,opponent:'竹北雷爵A',seq:3,inning:2,no:9,name:'蕭沛庭',content:'K',rbi:0,r:0},
+  {game:5,opponent:'竹北雷爵A',seq:4,inning:1,no:8,name:'何天浩',content:'E_內',rbi:0,r:1},
+  {game:5,opponent:'竹北雷爵A',seq:4,inning:2,no:8,name:'何天浩',content:'K',rbi:0,r:0},
+  {game:5,opponent:'竹北雷爵A',seq:5,inning:1,no:82,name:'鄞圻睿',content:'K',rbi:0,r:0},
+  {game:5,opponent:'竹北雷爵A',seq:5,inning:3,no:82,name:'鄞圻睿',content:'K',rbi:0,r:0},
+  {game:5,opponent:'竹北雷爵A',seq:6,inning:1,no:81,name:'陳柏呈',content:'E_內',rbi:0,r:1},
+  {game:5,opponent:'竹北雷爵A',seq:6,inning:3,no:81,name:'陳柏呈',content:'GO',rbi:0,r:0},
+  {game:5,opponent:'竹北雷爵A',seq:7,inning:1,no:77,name:'林承熙',content:'K',rbi:0,r:0},
+  {game:5,opponent:'竹北雷爵A',seq:7,inning:3,no:15,name:'陳冠安',content:'K',rbi:0,r:0},
+  {game:5,opponent:'竹北雷爵A',seq:8,inning:1,no:72,name:'張世昀',content:'GO',rbi:0,r:0},
+  {game:5,opponent:'竹北雷爵A',seq:8,inning:4,no:50,name:'陳昱瑄',content:'K',rbi:0,r:0},
+  {game:5,opponent:'竹北雷爵A',seq:9,inning:2,no:99,name:'張郁晨',content:'K',rbi:0,r:0},
+  {game:5,opponent:'竹北雷爵A',seq:9,inning:4,no:26,name:'莊閔程',content:'K',rbi:0,r:0},
+  // 場次6 vs 活力社區
+  {game:6,opponent:'活力社區',seq:1,inning:1,no:9,name:'蕭沛庭',content:'HP',rbi:0,r:1},
+  {game:6,opponent:'活力社區',seq:1,inning:2,no:9,name:'蕭沛庭',content:'1B',rbi:0,r:1},
+  {game:6,opponent:'活力社區',seq:1,inning:3,no:9,name:'蕭沛庭',content:'FO_內',rbi:0,r:0},
+  {game:6,opponent:'活力社區',seq:2,inning:1,no:98,name:'朱彥宇',content:'FO_內',rbi:0,r:0},
+  {game:6,opponent:'活力社區',seq:2,inning:2,no:98,name:'朱彥宇',content:'E_內',rbi:0,r:1},
+  {game:6,opponent:'活力社區',seq:2,inning:3,no:98,name:'朱彥宇',content:'K',rbi:0,r:0},
+  {game:6,opponent:'活力社區',seq:3,inning:1,no:50,name:'陳昱瑄',content:'FO_內',rbi:0,r:0},
+  {game:6,opponent:'活力社區',seq:3,inning:2,no:50,name:'陳昱瑄',content:'3B',rbi:2,r:0},
+  {game:6,opponent:'活力社區',seq:3,inning:5,no:72,name:'張世昀',content:'1B',rbi:0,r:0},
+  {game:6,opponent:'活力社區',seq:4,inning:1,no:34,name:'劉禹樂',content:'3B',rbi:1,r:1},
+  {game:6,opponent:'活力社區',seq:4,inning:2,no:34,name:'劉禹樂',content:'K',rbi:0,r:0},
+  {game:6,opponent:'活力社區',seq:4,inning:5,no:64,name:'黃晨睿',content:'FC',rbi:0,r:0},
+  {game:6,opponent:'活力社區',seq:5,inning:1,no:82,name:'鄞圻睿',content:'E_內',rbi:0,r:0},
+  {game:6,opponent:'活力社區',seq:5,inning:3,no:82,name:'鄞圻睿',content:'K',rbi:0,r:0},
+  {game:6,opponent:'活力社區',seq:5,inning:4,no:15,name:'陳冠安',content:'K',rbi:0,r:0},
+  {game:6,opponent:'活力社區',seq:6,inning:1,no:81,name:'陳柏呈',content:'E_內',rbi:0,r:0},
+  {game:6,opponent:'活力社區',seq:6,inning:3,no:81,name:'陳柏呈',content:'1B',rbi:0,r:0},
+  {game:6,opponent:'活力社區',seq:6,inning:4,no:81,name:'陳柏呈',content:'FO_內',rbi:0,r:0},
+  {game:6,opponent:'活力社區',seq:7,inning:1,no:35,name:'林賴奇',content:'K',rbi:0,r:0},
+  {game:6,opponent:'活力社區',seq:7,inning:3,no:35,name:'林賴奇',content:'K',rbi:0,r:0},
+  {game:6,opponent:'活力社區',seq:8,inning:2,no:77,name:'林承熙',content:'GO',rbi:0,r:0},
+  {game:6,opponent:'活力社區',seq:8,inning:3,no:77,name:'林承熙',content:'FO_內',rbi:0,r:0},
+  {game:6,opponent:'活力社區',seq:9,inning:2,no:26,name:'莊閔程',content:'GO',rbi:0,r:0},
+  {game:6,opponent:'活力社區',seq:9,inning:4,no:99,name:'張郁晨',content:'GO',rbi:0,r:0},
+];
+
+function getBatBadgeClass(content){
+  if(!content||content==='—') return 'hitnone';
+  if(content==='HR_內'||content==='HR') return 'hithr';
+  if(content.startsWith('3B')) return 'hit3b';
+  if(content.startsWith('2B')) return 'hit2b';
+  if(content.startsWith('1B')) return 'hit1b';
+  if(content==='BB') return 'hitbb';
+  if(content==='K') return 'hitkk';
+  if(content.startsWith('FO')) return 'hitfo';
+  if(content==='GO') return 'hitgo';
+  if(content==='HP') return 'hithp';
+  if(content.startsWith('E_')||content==='E') return 'hiterr';
+  return 'hitnone';
+}
+function getBatLabel(content){
+  if(!content||content==='—') return '—';
+  const map={'HR_內':'全壘打','HR':'全壘打','3B':'三壘打','2B':'二壘打','1B':'一壘打',
+    '1B_內':'一壘打(內)','BB':'四壞球','K':'三振','FO':'飛球出局','FO_內':'內野飛球',
+    'GO':'滾地出局','HP':'觸身球','FC':'野手選擇','E_內':'守備失誤','E_外':'失誤','E':'失誤'};
+  return map[content]||content;
+}
+
+function initBattingSelects(){
+  const gSel=document.getElementById('bat-game-sel');
+  if(!gSel) return;
+  const gameNums=[...new Set(BATTING_DATA.map(d=>d.game))].sort((a,b)=>a-b);
+  gSel.innerHTML='<option value="0">🏆 全隊累積</option>'+
+    gameNums.map(g=>`<option value="${g}">${GAME_LABELS[g]||'第'+g+'場'}</option>`).join('');
+  const pSel=document.getElementById('bat-player-sel');
+  const playerMap={};
+  BATTING_DATA.forEach(d=>{playerMap[d.no]=d.name;});
+  pSel.innerHTML='<option value="0">🏆 全隊累積</option>'+
+    Object.entries(playerMap).sort((a,b)=>+a[0]-+b[0])
+      .map(([no,name])=>`<option value="${no}">#${no} ${name}</option>`).join('');
+}
+// ── 逐打席時序排序：處理局間打序接續及 9→1 循環翻轉 ────────────────────
+// 棒球規則：打序固定為第1~9棒，每局結束後下一局從上一局最後打序的「下一棒」
+// 開始（9棒之後回到1棒），打序值本身永遠在1~9之間，不累計超過9。
+// 修正：改用 row index 作為 orderMap 的 key，避免同局同打序代打情況造成 key 碰撞覆蓋。
+function sortBatDetailsChronologically(rows){
+  const games=[...new Set(rows.map(r=>r.game))].sort((a,b)=>a-b);
+  const result=[];
+  games.forEach(gm=>{
+    const gameRows=rows.filter(r=>r.game===gm);
+    const detailRows=gameRows.filter(r=>r.inning>0&&r.seq>0);
+    const noDetailRows=gameRows.filter(r=>!(r.inning>0&&r.seq>0));
+    const innings=[...new Set(detailRows.map(r=>r.inning))].sort((a,b)=>a-b);
+    const maxSeq=Math.max(...detailRows.map(r=>r.seq),9); // 通常為9
+    let lastSeq=0;
+    // orderArr：每筆 row 對應一個排序編號（用原始陣列 index 作 key，避免代打 key 碰撞）
+    const orderArr=new Array(detailRows.length).fill(9999);
+    let counter=0;
+    innings.forEach(inn=>{
+      // 取得本局所有 row 的 index 與 seq
+      const innEntries=detailRows
+        .map((r,i)=>({i,seq:r.seq}))
+        .filter(e=>detailRows[e.i].inning===inn);
+      const innSeqs=innEntries.map(e=>e.seq);
+      // 本局起始打序：第1局取最小值；後續局接續前一局最後打序的下一棒（9→1 循環）
+      const startSeq=lastSeq===0
+        ? Math.min(...innSeqs)
+        : (lastSeq%maxSeq)+1;
+      // 依循環偏移量排列本局所有打席（相同 seq 的保持原相對順序）
+      const sorted=innEntries.slice().sort((a,b)=>{
+        const aPos=(a.seq-startSeq+maxSeq)%maxSeq;
+        const bPos=(b.seq-startSeq+maxSeq)%maxSeq;
+        return aPos-bPos;
+      });
+      sorted.forEach(e=>{ orderArr[e.i]=counter++; });
+      if(sorted.length) lastSeq=sorted[sorted.length-1].seq;
+    });
+    const orderedDetail=detailRows.slice().sort((a,b)=>{
+      const ai=detailRows.indexOf(a);
+      const bi=detailRows.indexOf(b);
+      return (orderArr[ai]??9999)-(orderArr[bi]??9999);
+    });
+    result.push(...orderedDetail,...noDetailRows);
+  });
+  return result;
+}
+// ─────────────────────────────────────────────────────────────────────────────
+function switchBatViewMode(mode){
+  document.getElementById('bat-game-ctrl').style.display=mode==='game'?'flex':'none';
+  document.getElementById('bat-player-ctrl').style.display=mode==='player'?'flex':'none';
+  renderBatting();
+}
+function renderBatting(){
+  const viewMode=document.getElementById('bat-view-mode').value;
+  const tbody=document.getElementById('bat-tbody');
+  tbody.innerHTML='';
+  const thead=document.getElementById('bat-thead-row');
+  if(viewMode==='game'){
+    const selGame=+document.getElementById('bat-game-sel').value;
+    if(selGame===0){
+      // seq=0 代表彙整格式上傳（無逐打席明細），改以球員+打擊內容列表呈現
+      const hasDetail=BATTING_DATA.some(d=>d.seq>0);
+      const gameKeys=[...new Set(BATTING_DATA.map(d=>d.game))].sort((a,b)=>a-b);
+      if(hasDetail){
+        const allSeqs=[...new Set(BATTING_DATA.filter(d=>d.seq>0).map(d=>d.seq))].sort((a,b)=>a-b);
+        thead.innerHTML='<th style="background:#a04000;">打序</th>'+
+          gameKeys.map((g,i)=>`<th class="${i>0?'inning-sep':''}" style="background:#a04000;white-space:nowrap;">${GAME_LABELS[g]||'第'+g+'場'}</th>`).join('');
+        allSeqs.forEach(seq=>{
+          const tr=document.createElement('tr');
+          let html=`<td class="seq-cell">第${seq}棒</td>`;
+          gameKeys.forEach((g,i)=>{
+            const entries=BATTING_DATA.filter(d=>d.seq===seq&&d.game===g);
+            const cls=i>0?'inning-sep':'';
+            if(entries.length){
+              const badges=entries.map(e=>{
+                const bc=getBatBadgeClass(e.content);
+                const lbl=getBatLabel(e.content);
+                const rbiR=(e.rbi>0||e.r>0)?`<span style="font-size:.68rem;color:#888;display:block;">${e.rbi>0?'打點:'+e.rbi+' ':''}${e.r>0?'得分:'+e.r:''}</span>`:'';
+                return `<span class="bat-badge ${bc}">#${e.no} ${e.name}</span><span style="font-size:.72rem;display:block;">${lbl}</span>${rbiR}`;
+              }).join('<br>');
+              html+=`<td class="${cls}">${badges}</td>`;
+            }else{
+              html+=`<td class="${cls}"><span style="color:#ccc">—</span></td>`;
+            }
+          });
+          tr.innerHTML=html;
+          tbody.appendChild(tr);
+        });
+      }else{
+        // 彙整格式：無打序/局數，改用球員×場次表格
+        const playerKeys=[...new Set(BATTING_DATA.map(d=>d.no))].sort((a,b)=>a-b);
+        thead.innerHTML='<th style="background:#a04000;">背號</th><th style="background:#a04000;">姓名</th>'+
+          gameKeys.map((g,i)=>`<th class="${i>0?'inning-sep':''}" style="background:#a04000;white-space:nowrap;">${GAME_LABELS[g]||'第'+g+'場'}</th>`).join('');
+        playerKeys.forEach(no=>{
+          const pRows=BATTING_DATA.filter(d=>d.no===no);
+          const pName=pRows[0]?.name||'';
+          const tr=document.createElement('tr');
+          let html=`<td style="font-weight:700;color:#a04000;">#${no}</td><td style="font-weight:600;">${pName}</td>`;
+          gameKeys.forEach((g,i)=>{
+            const gRows=pRows.filter(d=>d.game===g);
+            const cls=i>0?'inning-sep':'';
+            if(gRows.length){
+              const badges=gRows.map(e=>{
+                const bc=getBatBadgeClass(e.content);
+                const lbl=getBatLabel(e.content);
+                const rbiR=(e.rbi>0||e.r>0)?`<span style="font-size:.68rem;color:#888;display:block;">${e.rbi>0?'打點:'+e.rbi+' ':''}${e.r>0?'得分:'+e.r:''}</span>`:'';
+                return `<span class="bat-badge ${bc}">${lbl}</span>${rbiR}`;
+              }).join('<br>');
+              html+=`<td class="${cls}">${badges}</td>`;
+            }else{
+              html+=`<td class="${cls}"><span style="color:#ccc">—</span></td>`;
+            }
+          });
+          tr.innerHTML=html;
+          tbody.appendChild(tr);
+        });
+      }
+    }else{
+      const rows=BATTING_DATA.filter(d=>d.game===selGame);
+      const hasDetail=rows.some(d=>d.seq>0);
+      if(hasDetail){
+        // ── 依場次查看（特定場次）：改為逐打席時序清單，正確呈現「打序不歸零、跨局接續」──
+        // 交叉表格式（打序×局次）在打序跨局重複出現時（如第1棒在第1局與第4局均打）
+        // 只有一列，視覺上無法呈現接續邏輯，故改用與「全隊累積」相同的時序清單。
+        thead.innerHTML=
+          '<th style="background:#a04000;">局數</th>'+
+          '<th style="background:#a04000;">打序</th>'+
+          '<th style="background:#a04000;">背號</th>'+
+          '<th style="background:#a04000;">球員</th>'+
+          '<th style="background:#a04000;">打擊內容</th>'+
+          '<th style="background:#a04000;">打點</th>'+
+          '<th style="background:#a04000;">得分</th>';
+        // 用 sortBatDetailsChronologically 依「跨局接續」邏輯排序本場打席
+        const sortedRows=sortBatDetailsChronologically(rows.filter(d=>d.seq>0&&d.inning>0));
+        if(!sortedRows.length){
+          tbody.innerHTML='<tr><td colspan="7" style="color:#999;padding:20px;">無逐打席資料</td></tr>';
+        }else{
+          let prevInning=0;
+          sortedRows.forEach(e=>{
+            // 局次分隔列：換局時插入視覺分隔
+            if(e.inning!==prevInning){
+              const sepTr=document.createElement('tr');
+              sepTr.innerHTML=`<td colspan="7" style="background:#f5e6d8;color:#7a2e00;font-weight:700;font-size:.82rem;padding:5px 12px;letter-spacing:.05em;">⚾ 第${e.inning}局</td>`;
+              tbody.appendChild(sepTr);
+              prevInning=e.inning;
+            }
+            const bc=getBatBadgeClass(e.content);
+            const lbl=getBatLabel(e.content);
+            const tr=document.createElement('tr');
+            tr.innerHTML=
+              `<td style="color:#a04000;font-weight:600;">第${e.inning}局</td>`+
+              `<td class="seq-cell">第${e.seq}棒</td>`+
+              `<td style="font-weight:700;color:#a04000;">#${e.no}</td>`+
+              `<td style="font-weight:600;">${e.name}</td>`+
+              `<td><span class="bat-badge ${bc}">${lbl}</span></td>`+
+              `<td>${e.rbi>0?'<span style="color:#c0392b;font-weight:700;">'+e.rbi+'</span>':e.rbi}</td>`+
+              `<td>${e.r>0?'<span style="color:#27ae60;font-weight:700;">'+e.r+'</span>':e.r}</td>`;
+            tbody.appendChild(tr);
+          });
+        }
+      }else{
+        // 彙整格式：無打序/局數，改用球員列表
+        const playerKeys=[...new Set(rows.map(d=>d.no))].sort((a,b)=>a-b);
+        thead.innerHTML='<th style="background:#a04000;">背號</th><th style="background:#a04000;">姓名</th><th style="background:#a04000;">打擊內容明細</th><th style="background:#a04000;">打點</th><th style="background:#a04000;">得分</th>';
+        playerKeys.forEach(no=>{
+          const pRows=rows.filter(d=>d.no===no);
+          const pName=pRows[0]?.name||'';
+          const totalRBI=pRows.reduce((s,d)=>s+d.rbi,0);
+          const totalR=pRows.reduce((s,d)=>s+d.r,0);
+          const badges=pRows.map(e=>{
+            const bc=getBatBadgeClass(e.content);
+            return `<span class="bat-badge ${bc}">${getBatLabel(e.content)}</span>`;
+          }).join(' ');
+          const tr=document.createElement('tr');
+          tr.innerHTML=`<td style="font-weight:700;color:#a04000;">#${no}</td><td style="font-weight:600;">${pName}</td>`+
+            `<td style="text-align:left;">${badges}</td>`+
+            `<td>${totalRBI>0?'<span style="color:#c0392b;font-weight:700;">'+totalRBI+'</span>':totalRBI}</td>`+
+            `<td>${totalR>0?'<span style="color:#27ae60;font-weight:700;">'+totalR+'</span>':totalR}</td>`;
+          tbody.appendChild(tr);
+        });
+      }
+    }
+  }else{
+    const selNo=+document.getElementById('bat-player-sel').value;
+    if(selNo===0){
+      // 全隊累積：無論靜態或彙整上傳，一律顯示 場次/局數/打序/背號/姓名/打擊內容/打點/得分
+      // seq=0 或 inning=0 以「—」顯示（彙整上傳格式無逐打席明細）
+      thead.innerHTML='<th style="background:#a04000;">場次</th><th style="background:#a04000;">局數</th><th style="background:#a04000;">打序</th><th style="background:#a04000;">背號</th><th style="background:#a04000;">姓名</th><th style="background:#a04000;">打擊內容</th><th style="background:#a04000;">打點</th><th style="background:#a04000;">得分</th>';
+      // 依真實比賽時序排序：局數優先，局內依「接續前局最後打序」的循環順序
+      const allRows=sortBatDetailsChronologically([...BATTING_DATA]);
+      if(!allRows.length){
+        tbody.innerHTML='<tr><td colspan="8" style="color:#999;padding:20px;">目前無打擊記錄</td></tr>';
+      }else{
+        allRows.forEach(e=>{
+          const bc=getBatBadgeClass(e.content);
+          const lbl=getBatLabel(e.content);
+          const tr=document.createElement('tr');
+          tr.innerHTML=`<td style="text-align:left;font-size:.82rem;">${GAME_LABELS[e.game]||'第'+e.game+'場'}</td>`+
+            `<td>${(e.inning>0)?'第'+e.inning+'局':'—'}</td>`+
+            `<td class="seq-cell">${e.seq>0?'第'+e.seq+'棒':'—'}</td>`+
+            `<td style="font-weight:700;color:#a04000;">#${e.no}</td><td style="font-weight:600;">${e.name}</td>`+
+            `<td><span class="bat-badge ${bc}">${lbl}</span></td>`+
+            `<td>${e.rbi>0?'<span style="color:#c0392b;font-weight:700;">'+e.rbi+'</span>':e.rbi}</td>`+
+            `<td>${e.r>0?'<span style="color:#27ae60;font-weight:700;">'+e.r+'</span>':e.r}</td>`;
+          tbody.appendChild(tr);
+        });
+      }
+    }else{
+      // 特定球員：同一球員每局只出現一次，依場次→局數排列
+      // 特定球員：依場次→局數→seq 排列，直接顯示 seq（1~9，棒球打序）
+      const rows=BATTING_DATA.filter(d=>d.no===selNo);
+      thead.innerHTML='<th style="background:#a04000;">場次</th><th style="background:#a04000;">局數</th><th style="background:#a04000;">打序</th><th style="background:#a04000;">打擊內容</th><th style="background:#a04000;">打點</th><th style="background:#a04000;">得分</th>';
+      if(!rows.length){
+        tbody.innerHTML='<tr><td colspan="6" style="color:#999;padding:20px;">該球員本季無打擊記錄</td></tr>';
+        return;
+      }
+      rows.sort((a,b)=>a.game-b.game||a.inning-b.inning||a.seq-b.seq).forEach(e=>{
+        const bc=getBatBadgeClass(e.content);
+        const lbl=getBatLabel(e.content);
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td style="text-align:left;font-size:.82rem;">${GAME_LABELS[e.game]||'第'+e.game+'場'}</td>`+
+          `<td>${(e.inning>0)?'第'+e.inning+'局':'—'}</td>`+
+          `<td class="seq-cell">${e.seq>0?'第'+e.seq+'棒':'—'}</td>`+
+          `<td><span class="bat-badge ${bc}">${lbl}</span></td>`+
+          `<td>${e.rbi>0?'<span style="color:#c0392b;font-weight:700;">'+e.rbi+'</span>':e.rbi}</td>`+
+          `<td>${e.r>0?'<span style="color:#27ae60;font-weight:700;">'+e.r+'</span>':e.r}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+  }
+  const total=BATTING_DATA.length;
+  const hits=BATTING_DATA.filter(d=>['1B','1B_內','2B','3B','HR_內','HR'].includes(d.content)).length;
+  const totalRBI=BATTING_DATA.reduce((s,d)=>s+d.rbi,0);
+  const totalR=BATTING_DATA.reduce((s,d)=>s+d.r,0);
+  document.getElementById('bat-summary').textContent=
+    `共 ${total} 筆打擊記錄｜安打 ${hits} 支｜累積打點 ${totalRBI}｜累積得分 ${totalR}`;
+  // 每次 renderBatting 後重新跑比對與渲染
+  renderBattingStats();
+}
+
+// ===== 打擊記錄統計彙整 =====
+function renderBattingStats(){
+  const container=document.getElementById('bat-stats-section');
+  if(!container) return;
+  const allGameNums=[...new Set(BATTING_DATA.map(d=>d.game))].sort((a,b)=>a-b);
+  // 計算每位球員全 6 場累積統計
+  const allPlayers=[];
+  const isHit=c=>['1B','1B_內','2B','3B','HR','HR_內'].includes(c);
+  const isAB =c=>!['BB','HP'].includes(c);
+  // 建立球員順序（依 no 排序）
+  const playerNos=[...new Set(BATTING_DATA.map(d=>d.no))].sort((a,b)=>a-b);
+  playerNos.forEach(no=>{
+    const rows=BATTING_DATA.filter(d=>d.no===no);
+    const name=rows[0].name;
+    let ab=0,h=0,bb=0,k=0,rbi=0,r=0,b1=0,b2=0,b3=0,hr=0;
+    rows.forEach(d=>{
+      const c=d.content||'';
+      if(isAB(c)) ab++;
+      if(isHit(c)) h++;
+      if(c==='BB') bb++;
+      if(c==='K')  k++;
+      rbi+=d.rbi; r+=d.r;
+      if(c==='1B'||c==='1B_內') b1++;
+      if(c==='2B') b2++;
+      if(c==='3B') b3++;
+      if(c==='HR'||c==='HR_內') hr++;
+    });
+    const pavg=ab>0?h/ab:null;
+    const php=rows.filter(d=>d.content==='HP').length;
+    const psf=0; // 高飛犧牲打(SF)，目前系統無此數據
+    const pobp=(ab+bb+php+psf)>0?(h+bb+php)/(ab+bb+php+psf):null;
+    const ptb=b1*1+b2*2+b3*3+hr*4;
+    const pslg=ab>0?ptb/ab:null;
+    allPlayers.push({no,name,ab,h,hp:php,avg:pavg,obp:pobp,bb,k,rbi,r,b1,b2,b3,hr,slg:pslg});
+  });
+
+  const COLS_STAT=[
+    {key:'no',label:'背號'},{key:'name',label:'球員'},
+    {key:'ab',label:'打數'},{key:'h',label:'安打'},
+    {key:'avg',label:'打擊率'},{key:'obp',label:'上壘率'},
+    {key:'rbi',label:'打點'},{key:'r',label:'得分'},
+    {key:'b1',label:'1B'},{key:'b2',label:'2B'},
+    {key:'b3',label:'3B'},{key:'hr',label:'HR'},
+    {key:'bb',label:'保送'},{key:'hp',label:'觸身'},
+    {key:'k',label:'三振'}
+  ];
+
+  const thead='<tr>'+COLS_STAT.map(c=>`<th style="background:#a04000;color:#fff;padding:9px 12px;font-size:.8rem;white-space:nowrap;">${c.label}</th>`).join('')+'</tr>';
+  const tbody=allPlayers.map((p,i)=>{
+    const bg=i%2===0?'#fff':'#fef9f5';
+    return '<tr style="background:'+bg+'">'+COLS_STAT.map(c=>{
+      let v=p[c.key];
+      if(c.key==='no') return `<td style="font-weight:700;color:#a04000;">#${v}</td>`;
+      if(c.key==='avg') return `<td style="font-weight:700;color:${p.ab>0&&p.avg>=0.4?'#c0392b':p.ab>0&&p.avg<0.2?'#888':'#333'}">${p.avg!==null?p.avg.toFixed(3):'---'}</td>`;
+      if(c.key==='obp') return `<td>${p.obp!==null?p.obp.toFixed(3):'---'}</td>`;
+      if(c.key==='hp') return `<td style="${v>0?'font-weight:700;color:#8e44ad;':''}">${v||0}</td>`;
+      if(c.key==='hr'&&v>0) return `<td style="font-weight:700;color:#c0392b;">${v}</td>`;
+      if(c.key==='rbi'&&v>0) return `<td style="font-weight:700;color:#1a5276;">${v}</td>`;
+      return `<td>${v!==undefined?v:0}</td>`;
+    }).join('')+'</tr>';
+  }).join('');
+
+  container.innerHTML=`
+    <div style="margin-top:28px;border-top:2px solid #f5cba7;padding-top:20px;">
+      <div style="margin-bottom:12px;">
+        <h3 style="margin:0;font-size:1rem;color:#a04000;">📊 打擊記錄統計彙整（共 ${allGameNums.length} 場 · 全 ${playerNos.length} 人）</h3>
+      </div>
+      <div style="overflow-x:auto;border-radius:10px;box-shadow:0 1px 8px rgba(0,0,0,.08);">
+        <table style="width:100%;border-collapse:collapse;background:#fff;min-width:700px;">
+          <thead>${thead}</thead>
+          <tbody>${tbody}</tbody>
+        </table>
+      </div>
+      <p style="font-size:.76rem;color:#888;margin-top:8px;">※ 打擊率 = 安打 ÷ 打數；上壘率 = (安打+保送+觸身) ÷ (打數+保送+觸身+高飛犧牲打)；打數不含保送(BB)及觸身球(HP)；高飛犧牲打(SF)目前系統無記錄，計為 0</p>
+    </div>`;
+}
+
+// ===== TAB 手動調整 =====
+// 代跑調整記錄：儲存在 RUN_ADJUSTMENTS 陣列
+let RUN_ADJUSTMENTS = [];
+try{
+  const saved = localStorage.getItem('u10_run_adjustments');
+  if(saved) RUN_ADJUSTMENTS = JSON.parse(saved);
+}catch(e){}
+
+function saveAdjustments(){
+  try{ localStorage.setItem('u10_run_adjustments', JSON.stringify(RUN_ADJUSTMENTS)); }catch(e){}
+}
+
+// 初始化手動調整頁籤的下拉選單
+function initAdjustSelects(){
+  const gSel = document.getElementById('adj-game-sel');
+  if(!gSel) return;
+  const gameNums = [...new Set([...BATTING_DATA.map(d=>d.game),...DEFENSE_DATA.map(d=>d.game)])].sort((a,b)=>a-b);
+  gSel.innerHTML = '<option value="">-- 選擇場次 --</option>' +
+    gameNums.map(g => `<option value="${g}">${GAME_LABELS[g]||'第'+g+'場'}</option>`).join('');
+  // 原始球員（打席球員）
+  const origSel = document.getElementById('adj-orig-player');
+  const subSel  = document.getElementById('adj-sub-player');
+  const allPlayers = [...new Set(BATTING_DATA.map(d=>d.no))].sort((a,b)=>a-b);
+  const opts = allPlayers.map(no=>{
+    const name = (BATTING_DATA.find(d=>d.no===no)||{}).name||'';
+    return `<option value="${no}">#${no} ${name}</option>`;
+  }).join('');
+  origSel.innerHTML = '<option value="">-- 選擇原打席球員 --</option>' + opts;
+  subSel.innerHTML  = '<option value="">-- 選擇代跑球員 --</option>' + opts;
+}
+
+// 動態更新「原打席球員」與「代跑球員」選單（依場次篩選出賽球員）
+function onAdjGameChange(){
+  const gm = parseInt(document.getElementById('adj-game-sel').value)||0;
+  const origSel = document.getElementById('adj-orig-player');
+  const subSel  = document.getElementById('adj-sub-player');
+  // 顯示該場次有出賽的球員
+  const playedNos = gm
+    ? [...new Set(BATTING_DATA.filter(d=>d.game===gm).map(d=>d.no))].sort((a,b)=>a-b)
+    : [...new Set(BATTING_DATA.map(d=>d.no))].sort((a,b)=>a-b);
+  const allNos   = [...new Set(BATTING_DATA.map(d=>d.no))].sort((a,b)=>a-b);
+  const makeOpts = (arr, label) => `<option value="">${label}</option>` +
+    arr.map(no=>{
+      const name = (BATTING_DATA.find(d=>d.no===no)||{}).name||'';
+      return `<option value="${no}">#${no} ${name}</option>`;
+    }).join('');
+  origSel.innerHTML = makeOpts(playedNos, '-- 選擇原打席球員（出賽者）--');
+  subSel.innerHTML  = makeOpts(allNos,   '-- 選擇代跑球員 --');
+  // 局次提示
+  const innHint = document.getElementById('adj-inning-hint');
+  if(gm){
+    const innings = [...new Set(BATTING_DATA.filter(d=>d.game===gm).map(d=>d.inning))].sort((a,b)=>a-b);
+    innHint.textContent = `（此場共 ${innings.length} 局：第${innings.join('、')}局）`;
+  } else {
+    innHint.textContent = '';
+  }
+}
+
+// 新增一筆代跑調整記錄
+function addAdjustment(){
+  const gm       = parseInt(document.getElementById('adj-game-sel').value)||0;
+  const origNo   = parseInt(document.getElementById('adj-orig-player').value)||0;
+  const subNo    = parseInt(document.getElementById('adj-sub-player').value)||0;
+  const fromInn  = parseInt(document.getElementById('adj-from-inning').value)||0;
+  const rTransfer= parseInt(document.getElementById('adj-r-transfer').value)||0;
+  const rbiTransfer= parseInt(document.getElementById('adj-rbi-transfer').value)||0;
+  const note     = document.getElementById('adj-note').value.trim();
+
+  if(!gm)   { alert('請選擇場次'); return; }
+  if(!origNo){ alert('請選擇原打席球員'); return; }
+  if(!subNo) { alert('請選擇代跑球員'); return; }
+  if(origNo===subNo){ alert('原打席球員與代跑球員不能相同'); return; }
+  if(!fromInn){ alert('請輸入代跑生效局次（正整數）'); return; }
+  if(rTransfer<0||rbiTransfer<0){ alert('得分/打點轉移數不能為負數'); return; }
+  if(rTransfer===0&&rbiTransfer===0){ alert('得分或打點至少需轉移 1 分'); return; }
+
+  const origName = (BATTING_DATA.find(d=>d.no===origNo)||{}).name||String(origNo);
+  const subName  = (BATTING_DATA.find(d=>d.no===subNo)||{}).name||String(subNo);
+  const gameLbl  = GAME_LABELS[gm]||'第'+gm+'場';
+
+  const adj = {
+    id: Date.now(),
+    game: gm,
+    gameLbl,
+    fromInning: fromInn,
+    origNo, origName,
+    subNo, subName,
+    rTransfer,
+    rbiTransfer,
+    note,
+    applied: false
+  };
+  RUN_ADJUSTMENTS.push(adj);
+  saveAdjustments();
+  renderAdjustmentList();
+  clearAdjForm();
+  // 自動套用並重整統計
+  applyAllAdjustments();
+}
+
+function clearAdjForm(){
+  document.getElementById('adj-game-sel').value = '';
+  document.getElementById('adj-orig-player').innerHTML = '<option value="">-- 選擇原打席球員（出賽者）--</option>';
+  document.getElementById('adj-sub-player').innerHTML  = '<option value="">-- 選擇代跑球員 --</option>';
+  document.getElementById('adj-from-inning').value = '';
+  document.getElementById('adj-r-transfer').value  = '0';
+  document.getElementById('adj-rbi-transfer').value= '0';
+  document.getElementById('adj-note').value = '';
+  document.getElementById('adj-inning-hint').textContent = '';
+}
+
+// 刪除調整記錄
+function deleteAdjustment(id){
+  if(!confirm('確定要刪除這筆代跑調整記錄？')) return;
+  RUN_ADJUSTMENTS = RUN_ADJUSTMENTS.filter(a=>a.id!==id);
+  saveAdjustments();
+  applyAllAdjustments();
+  renderAdjustmentList();
+}
+
+// 清除所有調整記錄（回復原始數據）
+function clearAllAdjustments(){
+  if(!confirm('確定要清除所有代跑調整記錄，並還原原始統計數據？')) return;
+  RUN_ADJUSTMENTS = [];
+  saveAdjustments();
+  // 還原 BATTING_DATA 中所有被調整過的得分
+  BATTING_DATA.forEach(d=>{
+    if(d._adjR   !== undefined){ d.r   = d._origR;   delete d._adjR;   delete d._origR;   }
+    if(d._adjRBI !== undefined){ d.rbi = d._origRBI; delete d._adjRBI; delete d._origRBI; }
+  });
+  refreshAllTabs();
+  renderAdjustmentList();
+}
+
+// 將所有調整記錄套用至 BATTING_DATA
+// 邏輯：先還原所有調整 → 再重新套用所有調整（保持冪等性）
+function applyAllAdjustments(){
+  // Step1：還原所有被調整過的得分/打點
+  BATTING_DATA.forEach(d=>{
+    if(d._adjR   !== undefined){ d.r   = d._origR;   delete d._adjR;   delete d._origR;   }
+    if(d._adjRBI !== undefined){ d.rbi = d._origRBI; delete d._adjRBI; delete d._origRBI; }
+  });
+
+  // Step2：逐筆套用調整
+  RUN_ADJUSTMENTS.forEach(adj=>{
+    const gm = adj.game;
+    // --- 得分調整 ---
+    if(adj.rTransfer > 0){
+      // 從原打席球員在該場（fromInning 之後的局）中扣除得分，加給代跑球員
+      let toDeduct = adj.rTransfer;
+      // 先嘗試從 fromInning 起的記錄扣
+      const origRows = BATTING_DATA
+        .filter(d => d.game===gm && d.no===adj.origNo && d.inning>=adj.fromInning && d.r>0)
+        .sort((a,b)=>a.inning-b.inning);
+      origRows.forEach(d=>{
+        if(toDeduct<=0) return;
+        if(d._origR===undefined) d._origR = d.r;
+        const take = Math.min(d.r, toDeduct);
+        d.r -= take;
+        d._adjR = true;
+        toDeduct -= take;
+      });
+      // 若仍未扣完，繼續從該場更早期的記錄扣（因記錄可能散佈各局）
+      if(toDeduct>0){
+        const origRowsAll = BATTING_DATA
+          .filter(d => d.game===gm && d.no===adj.origNo && d.r>0)
+          .sort((a,b)=>a.inning-b.inning);
+        origRowsAll.forEach(d=>{
+          if(toDeduct<=0) return;
+          if(d._origR===undefined) d._origR = d.r;
+          const take = Math.min(d.r, toDeduct);
+          d.r -= take;
+          d._adjR = true;
+          toDeduct -= take;
+        });
+      }
+      // 加給代跑球員（掛在該場代跑球員第一筆記錄，或新建虛擬記錄）
+      const subRows = BATTING_DATA.filter(d => d.game===gm && d.no===adj.subNo);
+      if(subRows.length){
+        const target = subRows.sort((a,b)=>a.inning-b.inning)[0];
+        if(target._origR===undefined) target._origR = target.r;
+        target.r += (adj.rTransfer - toDeduct); // toDeduct 代表實際成功扣到的量
+        target._adjR = true;
+      } else {
+        // 代跑球員在此場無打席記錄，建立虛擬記錄
+        const virtualR = adj.rTransfer - toDeduct;
+        if(virtualR>0){
+          const subName = (BATTING_DATA.find(d=>d.no===adj.subNo)||{}).name||String(adj.subNo);
+          BATTING_DATA.push({
+            game:gm, opponent: (BATTING_DATA.find(d=>d.game===gm)||{}).opponent||'',
+            seq:0, inning:adj.fromInning, no:adj.subNo, name:subName,
+            content:'代跑得分', rbi:0, r:virtualR, _adjR:true, _origR:0, _isVirtual:true
+          });
+        }
+      }
+    }
+
+    // --- 打點調整 ---
+    if(adj.rbiTransfer > 0){
+      let toDeduct = adj.rbiTransfer;
+      const origRows = BATTING_DATA
+        .filter(d => d.game===gm && d.no===adj.origNo && d.inning>=adj.fromInning && d.rbi>0)
+        .sort((a,b)=>a.inning-b.inning);
+      origRows.forEach(d=>{
+        if(toDeduct<=0) return;
+        if(d._origRBI===undefined) d._origRBI = d.rbi;
+        const take = Math.min(d.rbi, toDeduct);
+        d.rbi -= take;
+        d._adjRBI = true;
+        toDeduct -= take;
+      });
+      if(toDeduct>0){
+        const origRowsAll = BATTING_DATA
+          .filter(d => d.game===gm && d.no===adj.origNo && d.rbi>0)
+          .sort((a,b)=>a.inning-b.inning);
+        origRowsAll.forEach(d=>{
+          if(toDeduct<=0) return;
+          if(d._origRBI===undefined) d._origRBI = d.rbi;
+          const take = Math.min(d.rbi, toDeduct);
+          d.rbi -= take;
+          d._adjRBI = true;
+          toDeduct -= take;
+        });
+      }
+      const subRows = BATTING_DATA.filter(d => d.game===gm && d.no===adj.subNo);
+      if(subRows.length){
+        const target = subRows.sort((a,b)=>a.inning-b.inning)[0];
+        if(target._origRBI===undefined) target._origRBI = target.rbi;
+        target.rbi += (adj.rbiTransfer - toDeduct);
+        target._adjRBI = true;
+      } else {
+        const virtualRBI = adj.rbiTransfer - toDeduct;
+        if(virtualRBI>0){
+          const subName = (BATTING_DATA.find(d=>d.no===adj.subNo)||{}).name||String(adj.subNo);
+          // 嘗試把打點加到剛剛建立的虛擬記錄
+          const vRow = BATTING_DATA.find(d=>d.game===gm&&d.no===adj.subNo&&d._isVirtual);
+          if(vRow){ vRow.rbi += virtualRBI; }
+          else {
+            BATTING_DATA.push({
+              game:gm, opponent:(BATTING_DATA.find(d=>d.game===gm)||{}).opponent||'',
+              seq:0, inning:adj.fromInning, no:adj.subNo, name:subName,
+              content:'代跑打點', rbi:virtualRBI, r:0, _adjRBI:true, _origRBI:0, _isVirtual:true
+            });
+          }
+        }
+      }
+    }
+  });
+
+  // Step3：移除因全部調整已清空的虛擬記錄（如 r=0 且 rbi=0 的虛擬 row）
+  const idxToDel = [];
+  BATTING_DATA.forEach((d,i)=>{ if(d._isVirtual && d.r===0 && d.rbi===0) idxToDel.push(i); });
+  idxToDel.reverse().forEach(i=>BATTING_DATA.splice(i,1));
+
+  // Step4：重刷所有統計頁籤
+  refreshAllTabs();
+}
+
+function refreshAllTabs(){
+  // 清圖表快取
+  ['chart-team-avg','chart-team-hits','chart-team-rbi','chart-player','chart-rank-avg','chart-rank-hits'].forEach(id=>{
+    if(charts[id]){charts[id].dispose();delete charts[id];}
+  });
+  tableData = buildTableData(); tableData.sort((a,b)=>a.no-b.no);
+  const sel=document.getElementById('player-select'); sel.innerHTML='';
+  buildPlayerSelect();
+  renderTeam();
+  renderTable(tableData);
+  renderAwards();
+  renderRankingCharts();
+  initBattingSelects(); renderBatting();
+}
+
+function renderAdjustmentList(){
+  const tbody = document.getElementById('adj-list-tbody');
+  if(!tbody) return;
+  if(!RUN_ADJUSTMENTS.length){
+    tbody.innerHTML = '<tr><td colspan="9" style="color:#aaa;padding:18px;text-align:center;">尚無代跑調整記錄</td></tr>';
+    document.getElementById('adj-summary-bar').style.display='none';
+    return;
+  }
+  document.getElementById('adj-summary-bar').style.display='flex';
+  const totalR   = RUN_ADJUSTMENTS.reduce((s,a)=>s+a.rTransfer,0);
+  const totalRBI = RUN_ADJUSTMENTS.reduce((s,a)=>s+a.rbiTransfer,0);
+  document.getElementById('adj-summary-bar').innerHTML =
+    `<span>📋 共 <strong>${RUN_ADJUSTMENTS.length}</strong> 筆調整</span>`+
+    `<span>🏃 轉移得分：<strong style="color:#27ae60;">${totalR}</strong> 分</span>`+
+    `<span>⭐ 轉移打點：<strong style="color:#1a5276;">${totalRBI}</strong> 分</span>`+
+    `<span style="margin-left:auto;"><button class="adj-btn adj-btn-danger" onclick="clearAllAdjustments()">🗑️ 清除全部調整</button></span>`;
+  tbody.innerHTML = RUN_ADJUSTMENTS.map(a=>{
+    const rTag   = a.rTransfer>0   ? `<span style="color:#27ae60;font-weight:700;">得分 -${a.rTransfer}</span>` : '';
+    const rbiTag = a.rbiTransfer>0 ? `<span style="color:#1a5276;font-weight:700;">打點 -${a.rbiTransfer}</span>` : '';
+    const rTagS  = a.rTransfer>0   ? `<span style="color:#27ae60;font-weight:700;">+${a.rTransfer}</span>` : '';
+    const rbiTagS= a.rbiTransfer>0 ? `<span style="color:#1a5276;font-weight:700;">+${a.rbiTransfer}</span>` : '';
+    return `<tr>
+      <td style="font-size:.8rem;color:#444;white-space:nowrap;">${a.gameLbl}</td>
+      <td style="font-size:.8rem;white-space:nowrap;">第${a.fromInning}局起</td>
+      <td><span style="font-weight:700;color:#005087;">#${a.origNo}</span><br><span style="font-size:.8rem;">${a.origName}</span></td>
+      <td style="text-align:center;font-size:1.1rem;">→</td>
+      <td><span style="font-weight:700;color:#27ae60;">#${a.subNo}</span><br><span style="font-size:.8rem;">${a.subName}</span></td>
+      <td style="font-size:.82rem;">${rTag} ${rbiTag}</td>
+      <td style="font-size:.82rem;">${rTagS} ${rbiTagS}</td>
+      <td style="font-size:.8rem;color:#888;max-width:120px;word-break:break-all;">${a.note||'—'}</td>
+      <td><button class="adj-btn adj-btn-danger" onclick="deleteAdjustment(${a.id})">🗑️</button></td>
+    </tr>`;
+  }).join('');
+}
+
+// 頁籤切換時初始化調整頁
+function initAdjustTab(){
+  initAdjustSelects();
+  renderAdjustmentList();
+  // 若已有儲存的調整記錄，重新套用
+  if(RUN_ADJUSTMENTS.length) applyAllAdjustments();
+}
+
+// ===== TAB 9: 守備獎項 =====
+function renderDefAwards(){
+  const AWARD_CATS=[
+    {id:'all', pos:null, gold:true},
+    {id:'1b',  pos:'1B'},
+    {id:'2b',  pos:'2B'},
+    {id:'3b',  pos:'3B'},
+    {id:'ss',  pos:'SS'},
+    {id:'p',   pos:'P'},
+    {id:'c',   pos:'C'},
+    {id:'cf',  pos:'CF'},
+    {id:'lf',  pos:'LF'},
+    {id:'rf',  pos:'RF'},
+  ];
+
+  // 計算各球員 FPCT，依 FPCT 分組（同值者視為並列同名次）
+  // 回傳: [[{no,name,tc,fpct}, ...], [...], [...]] — 最多3個名次組
+  function calcGroups(posFilter){
+    const map={};
+    DEFENSE_DATA.forEach(d=>{
+      if(posFilter && d.pos!==posFilter) return;
+      if(!map[d.no]) map[d.no]={no:d.no,name:d.name,tc:0,err:0};
+      map[d.no].tc++;
+      if(d.isError) map[d.no].err++;
+    });
+    const sorted=Object.values(map)
+      .filter(p=>p.tc>0)
+      .map(p=>({...p,fpct:+(( (p.tc-p.err)/p.tc ).toFixed(3))}))
+      .sort((a,b)=>b.fpct-a.fpct||b.tc-a.tc||a.no-b.no);
+    // 依 FPCT 值分組，每組為並列同名次
+    const groups=[];
+    let i=0;
+    while(i<sorted.length && groups.length<3){
+      const val=sorted[i].fpct;
+      const grp=[];
+      while(i<sorted.length && sorted[i].fpct===val){ grp.push(sorted[i]); i++; }
+      groups.push(grp);
+    }
+    return groups; // groups[0]=Top1並列, groups[1]=Top2並列, groups[2]=Top3並列
+  }
+
+  const rankLabel=['Top 1','Top 2','Top 3'];
+  const rankEmoji=['🥇','🥈','🥉'];
+  const rankCls=['r1','r2','r3'];
+
+  // 預先算好各 category 的分組
+  const allGroups=AWARD_CATS.map(cat=>calcGroups(cat.pos));
+
+  const tbody=document.getElementById('defaward-tbody');
+  tbody.innerHTML='';
+
+  for(let r=0;r<3;r++){
+    const tr=document.createElement('tr');
+    let html=`<td class="defaward-rank-cell ${rankCls[r]}">${rankEmoji[r]}<br><span style="font-size:.72rem;">${rankLabel[r]}</span></td>`;
+    AWARD_CATS.forEach((cat,ci)=>{
+      const grp=allGroups[ci][r]; // 該名次的並列球員陣列（或 undefined）
+      const sepCls=ci===0?'defaward-sep gold':'defaward-sep';
+      if(grp && grp.length){
+        // 並列多人：每人一個 .da-slot，三欄高度同步對齊
+        const nos  =grp.map(p=>`<div class="da-slot"><span class="defaward-no">#${p.no}</span></div>`).join('');
+        const names=grp.map(p=>`<div class="da-slot"><span class="defaward-name">${p.name}</span></div>`).join('');
+        const vals =grp.map(p=>
+          `<div class="da-slot">`+
+          `<span class="defaward-val">${p.fpct.toFixed(3)}</span>`+
+          `<span style="font-size:.70rem;color:#999;line-height:1.3;">(${p.tc}次)</span>`+
+          `</div>`
+        ).join('');
+        html+=`<td class="${sepCls}">${nos}</td>`+
+              `<td>${names}</td>`+
+              `<td>${vals}</td>`;
+      }else{
+        html+=`<td class="${sepCls}"><span class="defaward-empty">—</span></td>`+
+              `<td><span class="defaward-empty">—</span></td>`+
+              `<td><span class="defaward-empty">—</span></td>`;
+      }
+    });
+    tr.innerHTML=html;
+    tbody.appendChild(tr);
+  }
+}
+
+
+// ===== 手動調整：代跑得分功能 =====
+let SCORE_ADJUSTMENTS = [];
+try {
+  const saved = localStorage.getItem('u10_score_adjustments');
+  if (saved) SCORE_ADJUSTMENTS = JSON.parse(saved);
+} catch(e) {}
+
+function saveAdjustments() {
+  try { localStorage.setItem('u10_score_adjustments', JSON.stringify(SCORE_ADJUSTMENTS)); } catch(e) {}
+}
+
+function initAdjustSelects() {
+  const gSel = document.getElementById('adj-game-sel');
+  if (!gSel) return;
+  const gameNums = [...new Set(BATTING_DATA.map(d=>d.game))].sort((a,b)=>a-b);
+  gSel.innerHTML = '<option value="">-- 選擇場次 --</option>' +
+    gameNums.map(g => `<option value="${g}">${GAME_LABELS[g]||'第'+g+'場'}</option>`).join('');
+  gSel.onchange = () => updateAdjPlayerSelects();
+  updateAdjPlayerSelects();
+}
+
+function updateAdjPlayerSelects() {
+  const gameVal = document.getElementById('adj-game-sel')?.value;
+  const fromSel = document.getElementById('adj-from-player');
+  const toSel   = document.getElementById('adj-to-player');
+  if (!fromSel || !toSel) return;
+  let players;
+  if (gameVal) {
+    const gNum = parseInt(gameVal);
+    const inGame = BATTING_DATA.filter(d => d.game === gNum);
+    const pMap = {};
+    inGame.forEach(d => { pMap[d.no] = d.name; });
+    players = Object.entries(pMap).sort((a,b)=>+a[0]-+b[0]).map(([no,name])=>({no:+no,name}));
+  } else {
+    const pMap = {};
+    BATTING_DATA.forEach(d => { pMap[d.no] = d.name; });
+    players = Object.entries(pMap).sort((a,b)=>+a[0]-+b[0]).map(([no,name])=>({no:+no,name}));
+  }
+  const allPMap = {};
+  players.forEach(p => { allPMap[p.no] = p.name; });
+  PLAYERS.forEach(p => { if(!allPMap[p.no]) allPMap[p.no]=p.name; });
+  const allPlayers = Object.entries(allPMap).sort((a,b)=>+a[0]-+b[0]).map(([no,name])=>({no:+no,name}));
+  const opts = '<option value="">-- 選擇球員 --</option>' +
+    allPlayers.map(p=>`<option value="${p.no}">#${p.no} ${p.name}</option>`).join('');
+  fromSel.innerHTML = opts;
+  toSel.innerHTML   = opts;
+}
+
+function addAdjustment() {
+  const game    = parseInt(document.getElementById('adj-game-sel').value);
+  const inning  = parseInt(document.getElementById('adj-inning').value);
+  const fromNo  = parseInt(document.getElementById('adj-from-player').value);
+  const toNo    = parseInt(document.getElementById('adj-to-player').value);
+  const runs    = parseInt(document.getElementById('adj-runs').value);
+  const note    = document.getElementById('adj-note').value.trim();
+
+  if (!game)  { showAdjMsg('error','⚠️ 請選擇場次'); return; }
+  if (!inning||inning<1||inning>9) { showAdjMsg('error','⚠️ 請輸入有效局數（1~9）'); return; }
+  if (!fromNo){ showAdjMsg('error','⚠️ 請選擇原球員（上壘者）'); return; }
+  if (!toNo)  { showAdjMsg('error','⚠️ 請選擇代跑球員'); return; }
+  if (fromNo === toNo) { showAdjMsg('error','⚠️ 原球員與代跑球員不可相同'); return; }
+  if (!runs||runs<1)  { showAdjMsg('error','⚠️ 請輸入有效轉移得分數（≥1）'); return; }
+
+  const fromName = PLAYERS.find(p=>p.no===fromNo)?.name || BATTING_DATA.find(d=>d.no===fromNo)?.name || String(fromNo);
+  const toName   = PLAYERS.find(p=>p.no===toNo)?.name   || BATTING_DATA.find(d=>d.no===toNo)?.name   || String(toNo);
+  const gameLbl  = GAME_LABELS[game] || `第${game}場`;
+
+  const fromRealR = BATTING_DATA.filter(d=>d.game===game&&d.no===fromNo&&!d._isAdjRow).reduce((s,d)=>s+d.r,0);
+  const alreadyTransferred = SCORE_ADJUSTMENTS
+    .filter(a=>a.game===game&&a.fromNo===fromNo&&!a.deleted)
+    .reduce((s,a)=>s+a.runs,0);
+  const available = fromRealR - alreadyTransferred;
+  if (runs > available) {
+    showAdjMsg('error',`⚠️ ${fromName} 在 ${gameLbl} 可調整得分不足。原始得分 ${fromRealR}，已調整 ${alreadyTransferred}，剩餘 ${available} 分`);
+    return;
+  }
+
+  const adj = {
+    id: Date.now(),
+    game, inning, fromNo, fromName, toNo, toName, runs, note,
+    gameLbl, deleted: false,
+    createdAt: new Date().toLocaleString('zh-TW')
+  };
+  SCORE_ADJUSTMENTS.push(adj);
+  saveAdjustments();
+  applyAdjustmentToBattingData(adj, false);
+
+  document.getElementById('adj-inning').value = '';
+  document.getElementById('adj-from-player').value = '';
+  document.getElementById('adj-to-player').value = '';
+  document.getElementById('adj-runs').value = '';
+  document.getElementById('adj-note').value = '';
+
+  showAdjMsg('success', `✅ 已將 ${fromName}（${gameLbl} 第${inning}局）的 ${runs} 得分 → 轉移給 ${toName}`);
+  renderAdjustTab();
+  refreshAllStats();
+}
+
+function applyAdjustmentToBattingData(adj, revert) {
+  const sign = revert ? -1 : 1;
+  const gameRows = BATTING_DATA.filter(d=>d.game===adj.game);
+  const fromRows = gameRows.filter(d=>d.no===adj.fromNo&&!d._isAdjRow);
+  const toRows   = gameRows.filter(d=>d.no===adj.toNo&&!d._isAdjRow);
+
+  let toDeduct = adj.runs * sign;
+  const sameInning = fromRows.filter(d=>d.inning===adj.inning&&d.r>0);
+  for(const row of sameInning) {
+    if(toDeduct===0) break;
+    const deduct = Math.min(Math.abs(toDeduct), row.r);
+    row.r -= deduct * Math.sign(toDeduct);
+    toDeduct -= deduct * Math.sign(toDeduct);
+  }
+  if(toDeduct!==0){
+    const otherRows = fromRows.filter(d=>d.r>0);
+    for(const row of otherRows){
+      if(toDeduct===0) break;
+      const deduct = Math.min(Math.abs(toDeduct), row.r);
+      row.r -= deduct * Math.sign(toDeduct);
+      toDeduct -= deduct * Math.sign(toDeduct);
+    }
+  }
+
+  if(toRows.length>0) {
+    const destRow = toRows.find(d=>d.inning===adj.inning) || toRows[0];
+    destRow.r += adj.runs * sign;
+    if(destRow.r < 0) destRow.r = 0;
+  } else {
+    if(!revert) {
+      BATTING_DATA.push({
+        game: adj.game,
+        opponent: BATTING_DATA.find(d=>d.game===adj.game)?.opponent||'',
+        seq: 0, inning: adj.inning,
+        no: adj.toNo, name: adj.toName,
+        content: 'PR', rbi: 0, r: adj.runs,
+        _isAdjRow: true, _adjId: adj.id
+      });
+    } else {
+      const idx = BATTING_DATA.findIndex(d=>d._adjId===adj.id&&d._isAdjRow);
+      if(idx>=0) BATTING_DATA.splice(idx,1);
+    }
+  }
+}
+
+function deleteAdjustment(id) {
+  if(!confirm('確定要刪除此調整記錄？刪除後相關得分將還原。')) return;
+  const adj = SCORE_ADJUSTMENTS.find(a=>a.id===id);
+  if(!adj||adj.deleted) return;
+  adj.deleted = true;
+  applyAdjustmentToBattingData(adj, true);
+  saveAdjustments();
+  showAdjMsg('success','🗑️ 調整記錄已刪除，得分已還原');
+  renderAdjustTab();
+  refreshAllStats();
+}
+
+function refreshAllStats(){
+  tableData = buildTableData();
+  tableData.sort((a,b)=>a.no-b.no);
+  buildPlayerSelect();
+  ['chart-team-avg','chart-team-hits','chart-team-rbi','chart-player','chart-rank-avg','chart-rank-hits']
+    .forEach(id=>{ if(charts[id]){charts[id].dispose();delete charts[id];} });
+  renderTeam();
+  renderTable(tableData);
+  renderAwards();
+  renderRankingCharts();
+  initBattingSelects(); renderBatting();
+}
+
+function showAdjMsg(type, msg) {
+  const el = document.getElementById('adj-msg');
+  if(!el) return;
+  el.style.display = 'block';
+  el.style.background = type==='error'?'#fdecea':'#e8f5e9';
+  el.style.border = type==='error'?'1.5px solid #f5c6cb':'1.5px solid #a5d6a7';
+  el.style.color  = type==='error'?'#c62828':'#2e7d32';
+  el.style.padding = '10px 14px';
+  el.style.borderRadius = '8px';
+  el.style.fontWeight = '600';
+  el.style.fontSize = '.9rem';
+  el.textContent = msg;
+  setTimeout(()=>{ if(el) el.style.display='none'; }, 5000);
+}
+
+function renderAdjustTab() {
+  initAdjustSelects();
+  const active = SCORE_ADJUSTMENTS.filter(a=>!a.deleted);
+  const totalTransferred = active.reduce((s,a)=>s+a.runs,0);
+  const uniqueGames = [...new Set(active.map(a=>a.game))].length;
+
+  const summaryEl = document.getElementById('adj-summary');
+  if(summaryEl) summaryEl.innerHTML = `
+    <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:20px;">
+      <div class="adj-stat-card"><div class="adj-stat-label">有效調整記錄</div><div class="adj-stat-val">${active.length} 筆</div></div>
+      <div class="adj-stat-card"><div class="adj-stat-label">累計轉移得分</div><div class="adj-stat-val" style="color:#005087">${totalTransferred} 分</div></div>
+      <div class="adj-stat-card"><div class="adj-stat-label">涉及場次</div><div class="adj-stat-val">${uniqueGames} 場</div></div>
+    </div>`;
+
+  const listEl = document.getElementById('adj-list-tbody');
+  if (!listEl) return;
+  if (!active.length) {
+    listEl.innerHTML = '<tr><td colspan="8" style="padding:24px;color:#aaa;text-align:center;">尚無調整記錄</td></tr>';
+    renderAdjImpactTable();
+    return;
+  }
+  listEl.innerHTML = [...active].reverse().map(a => `
+    <tr>
+      <td style="font-size:.82rem;color:#555;">${a.gameLbl||'第'+a.game+'場'}</td>
+      <td>第 ${a.inning} 局</td>
+      <td><span style="font-weight:700;color:#005087;">#${a.fromNo}</span> ${a.fromName}</td>
+      <td style="color:#888;">→</td>
+      <td><span style="font-weight:700;color:#e67e22;">#${a.toNo}</span> ${a.toName}</td>
+      <td style="font-weight:800;color:#c0392b;">+${a.runs} 分</td>
+      <td style="font-size:.78rem;color:#888;">${a.note||'—'}</td>
+      <td><button onclick="deleteAdjustment(${a.id})"
+        style="background:#e74c3c;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:.78rem;cursor:pointer;font-weight:600;">🗑️ 刪除</button></td>
+    </tr>`).join('');
+  renderAdjImpactTable();
+}
+
+function renderAdjImpactTable() {
+  const el = document.getElementById('adj-impact-tbody');
+  if (!el) return;
+  const active = SCORE_ADJUSTMENTS.filter(a=>!a.deleted);
+  if (!active.length) {
+    el.innerHTML = '<tr><td colspan="6" style="padding:16px;color:#aaa;text-align:center;">無調整記錄</td></tr>';
+    return;
+  }
+  const delta = {};
+  active.forEach(a => {
+    if (!delta[a.fromNo]) delta[a.fromNo] = {no:a.fromNo, name:a.fromName, subtract:0, add:0};
+    if (!delta[a.toNo])   delta[a.toNo]   = {no:a.toNo,   name:a.toName,   subtract:0, add:0};
+    delta[a.fromNo].subtract += a.runs;
+    delta[a.toNo].add        += a.runs;
+  });
+  const rows = Object.values(delta).sort((a,b)=>a.no-b.no);
+  el.innerHTML = rows.map(p => {
+    const afterR = BATTING_DATA.filter(d=>d.no===p.no).reduce((s,d)=>s+d.r,0);
+    const origR  = afterR + p.subtract - p.add;
+    const net    = p.add - p.subtract;
+    const netStyle = net>0?'color:#27ae60;font-weight:700;':net<0?'color:#c0392b;font-weight:700;':'color:#888;';
+    return `<tr>
+      <td style="font-weight:700;color:#005087;">#${p.no}</td>
+      <td style="font-weight:600;">${p.name}</td>
+      <td>${origR}</td>
+      <td style="color:#c0392b;">${p.subtract>0?'-'+p.subtract:'—'}</td>
+      <td style="color:#27ae60;">${p.add>0?'+'+p.add:'—'}</td>
+      <td style="${netStyle}">${net>0?'+'+net:net} 分</td>
+    </tr>`;
+  }).join('');
+}
+</script>
+</body>
+</html>
