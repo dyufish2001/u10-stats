@@ -701,6 +701,12 @@ tr.total-row td{background:#e8f0fa;font-weight:700;color:#005087;}
         </tbody>
       </table>
     </div>
+    <!-- 更新預設打擊數據按鈕（與資料上傳頁籤同步） -->
+    <div style="margin-top:16px;padding-top:14px;border-top:1.5px dashed #e0c8a8;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <button class="btn-setdefault" onclick="updateDefaultData()">💾 更新預設打擊數據</button>
+      <span style="font-size:.82rem;color:#999;">點擊後關閉再重新開啟頁面，仍可保留目前打擊數據</span>
+    </div>
+    <div class="success-msg" id="adj-setdefault-success" style="background:#fff3e0;border-color:#ffcc80;color:#e65100;">💾 預設數據已更新！重新開啟頁面時將自動載入。</div>
   </div>
 
   <!-- 影響彙整表 -->
@@ -1798,8 +1804,13 @@ function updateDefaultData(){
   try{
     localStorage.setItem('u10_default_players',JSON.stringify(PLAYERS));
     localStorage.setItem('u10_default_team_games',JSON.stringify(TEAM_GAMES));
-    const sm=document.getElementById('setdefault-success');sm.style.display='block';
-    setTimeout(()=>{sm.style.display='none';},3000);
+    // ★ 同步儲存逐打席明細（BATTING_DATA），確保重開頁面後可還原
+    localStorage.setItem('u10_default_batting_data',JSON.stringify(BATTING_DATA));
+    // 同步顯示「資料上傳」與「手動調整」兩個頁籤的成功提示訊息
+    ['setdefault-success','adj-setdefault-success'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el){el.style.display='block';setTimeout(()=>{el.style.display='none';},3000);}
+    });
   }catch(e){alert('儲存失敗：'+e.message);}
 }
 function resetData(){
@@ -1930,12 +1941,19 @@ document.addEventListener('DOMContentLoaded',()=>{
   try{
     const lp=localStorage.getItem('u10_default_players');
     const ltg=localStorage.getItem('u10_default_team_games');
+    const lbd=localStorage.getItem('u10_default_batting_data');
     if(lp&&ltg){
       const pArr=JSON.parse(lp),gArr=JSON.parse(ltg);
       PLAYERS.length=0;pArr.forEach(p=>PLAYERS.push(JSON.parse(JSON.stringify(p))));
       DEFAULT_PLAYERS.length=0;pArr.forEach(p=>DEFAULT_PLAYERS.push(JSON.parse(JSON.stringify(p))));
       TEAM_GAMES.length=0;gArr.forEach(g=>TEAM_GAMES.push(JSON.parse(JSON.stringify(g))));
       DEFAULT_TEAM_GAMES.length=0;gArr.forEach(g=>DEFAULT_TEAM_GAMES.push(JSON.parse(JSON.stringify(g))));
+    }
+    // ★ 還原逐打席明細（BATTING_DATA）
+    if(lbd){
+      const bdArr=JSON.parse(lbd);
+      BATTING_DATA.length=0;
+      bdArr.forEach(d=>BATTING_DATA.push(JSON.parse(JSON.stringify(d))));
     }
   }catch(e){}
   renderTeam();
@@ -2444,7 +2462,21 @@ function applyDefData(){
 function saveDefDefault(){
   try{
     localStorage.setItem('u10_def_default_defense', JSON.stringify(DEFENSE_DATA));
-    alert('💾 守備預設數據已儲存！');
+    // ★ 同步儲存 GAME_LABELS，確保重開頁面後場次標籤可還原
+    localStorage.setItem('u10_def_default_game_labels', JSON.stringify(GAME_LABELS));
+    // 顯示 toast 提示（不用 alert 中斷操作）
+    let sm=document.getElementById('def-setdefault-success');
+    if(!sm){
+      sm=document.createElement('div');
+      sm.id='def-setdefault-success';
+      sm.className='success-msg';
+      sm.style.cssText='background:#fff3e0;border-color:#ffcc80;color:#e65100;';
+      const defPreviewSec=document.getElementById('def-preview-sec');
+      if(defPreviewSec) defPreviewSec.appendChild(sm);
+    }
+    sm.textContent='💾 守備預設數據已更新！';
+    sm.style.display='block';
+    setTimeout(()=>{sm.style.display='none';},3000);
   }catch(e){alert('儲存失敗：'+e.message);}
 }
 function clearDefData(){
@@ -2480,6 +2512,25 @@ function clearDefData(){
 
 // 設定守備上傳拖放
 document.addEventListener('DOMContentLoaded',()=>{
+  // ★ 還原預設守備數據（DEFENSE_DATA + GAME_LABELS）
+  try{
+    const lsDef=localStorage.getItem('u10_def_default_defense');
+    const lsGL=localStorage.getItem('u10_def_default_game_labels');
+    if(lsDef){
+      const defArr=JSON.parse(lsDef);
+      DEFENSE_DATA.length=0;
+      defArr.forEach(d=>DEFENSE_DATA.push(JSON.parse(JSON.stringify(d))));
+      // 還原 GAME_LABELS：優先用已儲存的版本，否則從 DEFENSE_DATA 重建
+      Object.keys(GAME_LABELS).forEach(k=>delete GAME_LABELS[k]);
+      if(lsGL){
+        const glObj=JSON.parse(lsGL);
+        Object.assign(GAME_LABELS,glObj);
+      }else{
+        const gmSet=[...new Set(DEFENSE_DATA.map(d=>d.game))].sort((a,b)=>a-b);
+        gmSet.forEach(g=>{ GAME_LABELS[g]=`第${g}場 vs ${DEFENSE_DATA.find(d=>d.game===g)?.opponent||'對手'}`; });
+      }
+    }
+  }catch(e){}
   const zone = document.getElementById('def-drop-zone');
   if(zone){
     zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('drag-over');});
